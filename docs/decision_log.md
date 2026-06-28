@@ -12,7 +12,7 @@
 
 ## 関連issue
 
-- #1
+- [#1 検索結果取得](https://github.com/ytnkgw/crowdworks-ai-analyzer/issues/1)
 
 ## 背景
 

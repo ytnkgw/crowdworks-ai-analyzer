@@ -10,7 +10,7 @@
 
 2026-06-28
 
-## 関連issue
+## 関連Issue
 
 - [#1 検索結果取得](https://github.com/ytnkgw/crowdworks-ai-analyzer/issues/1)
 

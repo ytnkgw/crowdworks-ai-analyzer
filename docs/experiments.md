@@ -1,17 +1,15 @@
-Experiment 001
+Experiment001
 
-curlだけで取得できる？
+curlで取得
 
-結果
+結果：成功
+Experiment002
 
-〇
-Experiment 002
-
-requestsで取得できる？
+requests
 
 未実施
-Experiment 003
+Experiment003
 
 Playwright必要？
 
-現状不要
+結果：不要

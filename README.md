@@ -1,15 +1,31 @@
-# クラウドソーシングサイトの応募案件選別自動化ツール
+# CrowdWorks Analyzer
 
-## 要件定義
-### 目的
-案件探しを30分から5分にする
+AIがクラウドソーシング案件を分析し、応募優先順位を提案するツールです。
 
-### 対象
-自分(将来的には他のフリーランス)
+---
 
-### MVP
-案件取得  
-↓  
-AI採点  
-↓  
-応募文生成  
+## Vision
+
+詳しくは
+
+docs/vision.md
+
+---
+
+## Features
+
+- HTML Parser
+- AI Analyzer
+- Score Ranking
+
+---
+
+## Development
+
+CONTRIBUTING.md
+
+---
+
+## Roadmap
+
+docs/roadmap.md

@@ -4,9 +4,17 @@ AIがクラウドソーシング案件を分析し、応募優先順位を提案
 
 ---
 
+## Development Setup
+
+```bash
+python3 -m venv .venv
+source .venv/bin/activate
+python3 -m pip install -r requirements.txt
+```
+
 ## Vision
 
-詳しくは[docs/vision.md](/docs/vision.md)
+[docs/vision.md](/docs/vision.md)
 
 ---
 

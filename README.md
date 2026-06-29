@@ -6,9 +6,7 @@ AIがクラウドソーシング案件を分析し、応募優先順位を提案
 
 ## Vision
 
-詳しくは
-
-docs/vision.md
+詳しくは[docs/vision.md](/docs/vision.md)
 
 ---
 

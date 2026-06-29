@@ -21,6 +21,7 @@ dist/
 
 .vscode/
 .idea/
+*.code-workspace
 
 # =====================
 # macOS

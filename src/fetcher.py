@@ -1,3 +1,4 @@
+import config
 import requests
 
 
@@ -11,7 +12,10 @@ def fetch_html(url: str) -> str:
     Returns:
         str: 取得したHTML
     """
-    response = requests.get(url)
+    response = requests.get(
+        url,
+        timeout=config.REQUEST_TIMEOUT,
+        )
 
     response.raise_for_status()
 

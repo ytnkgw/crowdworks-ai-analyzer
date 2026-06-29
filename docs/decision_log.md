@@ -4,6 +4,17 @@
 
 ---
 
+# Decision 005 - Decision: CrowdWorks検索結果はDOM構造ではなく、#vue-container の data 属性に格納されたJSONを解析する方式を採用する。
+## 日付
+
+2026-06-29
+
+## 理由
+
+* 当初HTMLタグでそれぞれの要素が格納されていると考えていたが、実際に解析してみるとdata属性にjson形式でのみ保存されていたから。
+
+
+
 # Decision 004 - Pythonソースコードは src/ 配下に配置する。
 
 ## 日付

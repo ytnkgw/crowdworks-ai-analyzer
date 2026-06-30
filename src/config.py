@@ -4,6 +4,8 @@ CW_JOB_DETAIL_URL = f"{CW_BASE_URL}/public/jobs"
 
 CW_JOB_LIST_URL = f"{CW_BASE_URL}/public/jobs/group/ai_bpo"
 
+OUTPUT_DIR = "output"
+
 DEBUG_DIR = "debug"
 
 HTML_FILENAME = "crowdworks_ai_bpo.html"

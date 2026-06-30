@@ -4,6 +4,7 @@ from typing import List
 from bs4 import BeautifulSoup
 import config
 from models import Job
+import utils
 
 
 def parse_jobs(html: str) -> list[Job]:
@@ -44,57 +45,55 @@ def parse_jobs(html: str) -> list[Job]:
         raise KeyError("対象の要素が見つかりませんでした。")
 
 
-def parse_job_detail(html: str):
+def parse_job_detail(job: Job, html: str) -> Job:
     soup = BeautifulSoup(html, "html.parser")
-
-    print("=== 抽出結果 ===")
 
     # 1. 案件タイトル
     # h1タグのテキストから後ろの余分なサブタイトル（カテゴリ情報等）を削ぎ落として取得
     title_tag = soup.find("h1")
     if title_tag:
         # 内包されているspan（サブタイトル）のテキストを除外して、メインタイトルのみを抽出
-        main_title = str(title_tag.find(text=True, recursive=False)).strip()
-        print(f"■ 案件タイトル:\n{main_title}\n")
+        title = title_tag.get_text(strip=True)
+        if title:
+            job.title = title.strip()
 
     # 2. 仕事の詳細 (全文)
     # <td class="confirm_outside_link"> 内に改行付きの全文が格納されています
     detail_td = soup.find("td", class_="confirm_outside_link")
     if detail_td:
         # <br>タグを実際の改行に変換しつつテキストを綺麗にする
-        detail_text = detail_td.get_text(separator="\n").strip()
-        print(f"■ 仕事の詳細 (全文):\n{detail_text}\n")
+        job.description = detail_td.get_text(separator="\n").strip()
 
     # 3. 報酬 / 4. 応募期限 / 5. 募集開始日（掲載日）
     # これらは「仕事の概要」テーブル（class="cw-table summary"）から抽出するのが確実です
-    summary_table = soup.find("table", class_="summary")
-    if summary_table:
-        for row in summary_table.find_all("tr"):
-            th = row.find("th")
-            td = row.find("td")
-            if th and td:
-                th_text = th.get_text(strip=True)
-                td_text = td.get_text(strip=True)
-
-            if "固定報酬" in th_text:
-                print(f"■ 報酬: {td_text}")
-            elif "掲載日" in th_text:
-                print(f"■ 募集開始日: {td_text}")
-            elif "応募期限" in th_text:
-                print(f"■ 応募期限: {td_text}")
+    summary = {}
+    for row in soup.find(
+        "table", class_="summary"
+    ).find_all(  # pyright: ignore[reportOptionalMemberAccess]
+        "tr"
+    ):
+        th = row.find("th")
+        td = row.find("td")
+        if th and td:
+            summary[th.get_text(strip=True)] = td.get_text(strip=True)
+    job.reward = summary.get("固定報酬制")
+    job.published_at = summary.get("掲載日")
+    job.application_deadline = summary.get("応募期限")
 
     # 6. 応募状況 (応募した人、募集人数)
     # class="application_status_table" のテーブルから抽出します
+    status = {}
+    for row in soup.find(
+        "table", class_="application_status_table"
+    ).find_all(  # pyright: ignore[reportOptionalMemberAccess]
+        "tr"
+    ):
+        th = row.find("th")
+        td = row.find("td")
+        if th and td:
+            status[th.get_text(strip=True)] = td.get_text(strip=True)
     status_table = soup.find("table", class_="application_status_table")
-    if status_table:
-        print("\n■ 応募状況:")
-        for row in status_table.find_all("tr"):
-            th = row.find("th")
-            td = row.find("td")
-            if th and td:
-                label = th.get_text(strip=True)
-                value = td.get_text(strip=True)
-                if label in ["応募した人", "募集人数"]:
-                    print(f"  ・{label}: {value}")
+    job.application_count = utils.extract_number(status.get("応募した人"))
+    job.recruitment_count = utils.extract_number(status.get("募集人数"))
 
-    print("================")
+    return job

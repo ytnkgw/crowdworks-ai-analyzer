@@ -1,13 +1,24 @@
 import config
 from pathlib import Path
 from fetcher import fetch_html
+from models import Job
 from parser import parse_jobs
 from parser import parse_job_detail
 
 
 def main():
 
-    # html = fetch_html(config.CW_JOB_LIST_URL)
+    html = fetch_html(config.CW_JOB_LIST_URL)
+
+    jobs = parse_jobs(html)
+
+    for job in jobs:
+        detail_html = fetch_html(job.url)
+        parse_job_detail(job, detail_html)
+
+    # 確認
+    for job in jobs:
+        print(job)
 
     # # 1. 実行ファイルから見た「1つ上の階層のdebugフォルダ」を定義
     # # （__file__ はこのPythonファイル自身の場所を指します）
@@ -32,8 +43,10 @@ def main():
     # print(f"{len(jobs)}件")
     # for job in jobs:
     #     print(job)
-    html = read_debug_html("cw_job_detail.html")
-    parse_job_detail(html)
+    # html = read_debug_html("cw_job_detail.html")
+    # job = Job(id=0, title="テスト案件", url="")
+    # job = parse_job_detail(job, html)
+    # print(job)
 
 
 def read_debug_html(filename: str) -> str:

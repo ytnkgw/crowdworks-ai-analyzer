@@ -5,3 +5,4 @@ from dataclasses import dataclass
 class Job:
     id: int
     title: str
+    url: str

@@ -1,4 +1,8 @@
-CROWDWORKS_URL = "https://crowdworks.jp/public/jobs/group/ai_bpo"
+CW_BASE_URL = "https://crowdworks.jp"
+
+CW_JOB_DETAIL_URL = f"{CW_BASE_URL}/public/jobs"
+
+CW_JOB_LIST_URL = f"{CW_BASE_URL}/public/jobs/group/ai_bpo"
 
 DEBUG_DIR = "debug"
 

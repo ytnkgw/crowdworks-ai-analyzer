@@ -1,3 +1,5 @@
+import os
+
 CW_BASE_URL = "https://crowdworks.jp"
 
 CW_JOB_DETAIL_URL = f"{CW_BASE_URL}/public/jobs"
@@ -11,3 +13,5 @@ DEBUG_DIR = "debug"
 HTML_FILENAME = "crowdworks_ai_bpo.html"
 
 REQUEST_TIMEOUT = 30
+
+OPENAI_API_KEY = os.getenv("CW_AI_ANALYZER_OPENAI_API_KEY", "")

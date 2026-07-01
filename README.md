@@ -147,6 +147,99 @@ AIによる案件分析結果を表します。
 - `analysis_results.json` は、今後のランキング機能や応募優先度判定の入力データとして利用できます。
 
 
+## 案件ランキング機能
+
+AI分析結果をもとに、案件を応募優先度の高い順に並び替えることができます。
+
+この機能では、`output/analysis_results.json` に保存された `Job` と `AnalysisResult` のセットを読み込み、`analysis.total_score` の高い順にランキングします。
+
+---
+
+### 実行方法
+
+```bash
+python3 src/main.py
+```
+
+---
+
+### 入力ファイル
+
+ランキング処理では、以下のAI分析結果ファイルを読み込みます。
+
+```text
+output/analysis_results.json
+```
+
+このファイルには、案件情報とAI分析結果が紐づいたデータが保存されています。
+
+---
+
+### 出力先
+
+ランキング結果は以下のファイルに保存されます。
+
+```text
+output/ranked_jobs.json
+```
+
+出力先ディレクトリが存在しない場合は、自動で作成されます。
+
+---
+
+### ランキング基準
+
+初期実装では、以下のルールでランキングします。
+
+- `analysis.total_score` の高い順に並び替える
+- 各案件に `rank` を付与する
+- `rank` は1から順番に付与する
+
+---
+
+### 出力形式
+
+```json
+[
+  {
+    "rank": 1,
+    "job": {
+      "id": 12345678,
+      "title": "案件タイトル",
+      "url": "https://crowdworks.jp/public/jobs/12345678"
+    },
+    "analysis": {
+      "reward_score": 4,
+      "competition_score": 3,
+      "ai_score": 5,
+      "continuity_score": 4,
+      "quality_score": 5,
+      "total_score": 91,
+      "recommendation_reasons": [
+        "生成AIを活用できる案件である"
+      ],
+      "concerns": [
+        "応募人数が多く競争率が高い"
+      ],
+      "application_strategy": [
+        "AI活用経験を具体例付きでアピールする"
+      ],
+      "overall_comment": "AIスキルとの親和性が高く、応募価値の高い案件です。"
+    }
+  }
+]
+```
+
+---
+
+### 備考
+
+- ランキング結果はUTF-8で保存されます。
+- 日本語はエスケープされず、そのまま読める形式で保存されます。
+- インデント付きJSONとして保存されるため、人間が確認しやすい形式になっています。
+- `ranked_jobs.json` は、応募優先度の確認や今後のレポート機能の入力データとして利用できます。
+
+
 ## Vision
 
 [docs/vision.md](/docs/vision.md)

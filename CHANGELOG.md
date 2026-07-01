@@ -3,6 +3,24 @@
 2026年7月1日
 
 ### Added
+- AI分析結果をもとに案件をランキングする機能を追加
+- `analysis.total_score` の降順で案件を並び替える `ranking.py` を追加
+- ランキング済み案件に `rank` を付与できるようにした
+- ランキング結果を `output/ranked_jobs.json` に保存できるようにした
+- Ranking関数のテストを追加
+
+### Verified
+- `analysis_results.json` を読み込み、ランキング処理へ渡せることを確認
+- `analysis.total_score` の高い順に案件が並ぶことを確認
+- `rank` が1から順番に付与されることを確認
+- 空配列を渡した場合でもエラーにならないことを確認
+- ランキング結果をUTF-8・インデント付きJSONで保存できることを確認
+
+## [Unreleased]
+### Data
+2026年7月1日
+
+### Added
 - `Job` と `AnalysisResult` を紐づけた分析結果Export機能を追加
 - AI分析結果を `output/analysis_results.json` に保存できるようにした
 - 出力先ディレクトリが存在しない場合に自動作成する処理を追加

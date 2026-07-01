@@ -1,0 +1,60 @@
+[
+  {
+    "rank": 1,
+    "job": {
+      "id": 13271006,
+      "title": "【20代/未経験歓迎🤖】コンテンツ画像作成に興味がある方歓迎｜画像作成スタッフ募集AIメディア・コンテンツ構築支援の仕事の依頼",
+      "url": "https://crowdworks.jp/public/jobs/13271006"
+    },
+    "analysis": {
+      "reward_score": 3,
+      "competition_score": 3,
+      "ai_score": 4,
+      "continuity_score": 4,
+      "quality_score": 4,
+      "total_score": 72,
+      "recommendation_reasons": [
+        "未経験者でも取り組みやすい環境が整っている",
+        "継続的な依頼が見込まれる"
+      ],
+      "concerns": [
+        "夜間の連絡があるため、ライフスタイルによっては応募が難しいかもしれない",
+        "応募人数が増える可能性がある"
+      ],
+      "application_strategy": [
+        "画像作成に対する興味や意欲を強調する",
+        "過去の経験やスキルを具体的にアピールする"
+      ],
+      "overall_comment": "未経験者歓迎の案件で、継続的な依頼が期待できるため、応募価値は高いです。"
+    }
+  },
+  {
+    "rank": 2,
+    "job": {
+      "id": 13257229,
+      "title": "【女性歓迎】ポッドキャスト・イベントのスポンサー営業パートナー募集（完全在宅）AI営業・マーケティング支援の仕事の依頼",
+      "url": "https://crowdworks.jp/public/jobs/13257229"
+    },
+    "analysis": {
+      "reward_score": 3,
+      "competition_score": 5,
+      "ai_score": 2,
+      "continuity_score": 3,
+      "quality_score": 4,
+      "total_score": 66,
+      "recommendation_reasons": [
+        "女性向けの特化した案件であり、特定のターゲットにアプローチできる",
+        "営業経験がある方にとっては魅力的な内容"
+      ],
+      "concerns": [
+        "報酬が不明であり、提案次第となるため不安がある",
+        "トライアル期間が1ヶ月のみで、長期的な安定性が不明"
+      ],
+      "application_strategy": [
+        "営業経験を強調し、過去の実績を具体的に示す",
+        "女性向けのマーケティングに対する理解をアピールする"
+      ],
+      "overall_comment": "営業経験を活かせる案件ですが、報酬が不明な点が懸念材料です。競争率は低く、応募しやすい環境です。"
+    }
+  }
+]

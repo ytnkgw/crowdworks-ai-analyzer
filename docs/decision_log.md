@@ -1,8 +1,39 @@
 # Decision Log
 
 このドキュメントでは、本プロジェクトにおける重要な設計判断（Architecture Decision）を記録する。
-
 ---
+
+# Decision 008 - AI分析結果をtotal_score順にランキングする
+
+AI分析結果を保存した `output/analysis_results.json` を読み込み、`analysis.total_score` の高い順に案件を並び替えるランキング機能を追加する。
+
+ランキング済みデータは `output/ranked_jobs.json` に保存し、各案件には `rank` を付与する。
+
+## 日付
+
+2026-07-01
+
+### Reason
+
+- AI分析結果をそのまま保存するだけでは、応募優先度が直感的に分かりにくい
+- `total_score` を基準に並び替えることで、優先して確認すべき案件を把握しやすくなる
+- `rank` を付与することで、ランキング結果を後続処理やUI表示で扱いやすくなる
+- 将来的なレポート出力や応募判断支援機能の土台になる
+
+### Result
+
+- `analysis_results.json` を読み込み、`total_score` の降順でランキングできるようになった
+- 各案件に `rank` を付与できるようになった
+- ランキング結果を `output/ranked_jobs.json` として保存できるようになった
+- Ranking処理のテストを追加し、正常に動作することを確認した
+
+### Notes
+
+初期実装では、ランキング基準は `analysis.total_score` のみとする。
+
+同点時の詳細な並び替えルールや、`quality_score`、`ai_score`、`reward_score` を使った補助的な順位付けは、必要になったタイミングで追加する。
+
+
 # Decision 007 - AI分析結果をJob情報と紐づけてJSON Exportする
 
 OpenAI APIで取得した `AnalysisResult` は、単体ではなく `Job` 情報と紐づけた形式で `output/analysis_results.json` に保存する。

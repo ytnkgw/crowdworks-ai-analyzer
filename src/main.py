@@ -5,12 +5,14 @@ from exporter import (
     build_job_analysis_item,
     export_job_analysis_results,
     export_jobs_to_json,
+    export_ranked_job_analysis_results,
 )
 from fetcher import fetch_html
 from models import Job
 from openai_client import analyze_job
 from parser import parse_jobs
 from parser import parse_job_detail
+from ranking import rank_job_analysis_results
 
 
 def main():
@@ -35,18 +37,28 @@ def main():
     # output_dir.mkdir(parents=True, exist_ok=True)
     # export_jobs_to_json(jobs, output_dir / "jobs.json")
 
-    ### Pipline: 案件情報の JSON ファイルからの読み込み
-    jobs = load_jobs_from_json(output_dir / "jobs.json")
+    # ### Pipline: 案件情報の JSON ファイルからの読み込み
+    # jobs = load_jobs_from_json(output_dir / "jobs.json")
 
-    ### Pipline: 案件情報の分析
-    export_results = []
-    for job in jobs[:2]:
-        result = analyze_job(job)
-        export_results.append(build_job_analysis_item(job, result))
-        print(result)
+    # ### Pipline: 案件情報の分析
+    # export_results = []
+    # for job in jobs[:2]:
+    #     result = analyze_job(job)
+    #     export_results.append(build_job_analysis_item(job, result))
+    #     print(result)
 
-    ### Pipline: 案件情報の分析結果の JSON ファイルへの保存
-    export_job_analysis_results(export_results, output_dir / "analysis_results.json")
+    # ### Pipline: 案件情報の分析結果の JSON ファイルへの保存
+    # export_job_analysis_results(export_results, output_dir / "analysis_results.json")
+
+    ### Pipline: 案件情報の分析結果の JSON ファイルからの読み込み
+    with open(output_dir / "analysis_results.json", "r", encoding="utf-8") as f:
+        loaded_results = json.load(f)
+
+    ### Pipline: 案件情報の分析結果のランキング付け
+    ranked_results = rank_job_analysis_results(loaded_results)
+
+    ### Pipline: 案件情報の分析結果のランキング付けの JSON ファイルへの保存
+    export_ranked_job_analysis_results(ranked_results, output_dir / "ranked_jobs.json")
 
 
 def load_jobs_from_json(file_path: str | Path) -> list[Job]:

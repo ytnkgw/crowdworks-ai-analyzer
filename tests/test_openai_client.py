@@ -37,7 +37,7 @@ def test_analyze_job_returns_analysis_result(monkeypatch: pytest.MonkeyPatch) ->
         def __init__(self, *args, **kwargs):
             self.chat = SimpleNamespace(completions=FakeCompletions())
 
-    monkeypatch.setattr(openai_client, "CLIENT", FakeClient())
+    monkeypatch.setattr(openai_client, "_CLIENT", FakeClient())
     monkeypatch.setenv("CW_AI_ANALYZER_OPENAI_API_KEY", "test-key")
 
     result = openai_client.analyze_job(job)

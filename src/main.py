@@ -28,10 +28,10 @@ def main():
     debug_dir.mkdir(parents=True, exist_ok=True)
     export_jobs_to_json(jobs, debug_dir / "jobs.json")
 
-    if jobs and jobs[0]:
-        first_job = jobs[0]
-        result = analyze_job(first_job)
-        print(result)
+    # if jobs and jobs:
+    #     first_job = jobs[0]
+    #     result = analyze_job(first_job)
+    #     print(result)
 
     # # 1. 実行ファイルから見た「1つ上の階層のdebugフォルダ」を定義
     # # （__file__ はこのPythonファイル自身の場所を指します）

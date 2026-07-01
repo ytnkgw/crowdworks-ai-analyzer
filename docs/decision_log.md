@@ -4,6 +4,29 @@
 
 ---
 
+# Decision　006 - OpenAI Clientを導入する
+
+CrowdWorks案件情報をAIで分析するため、OpenAI APIを利用する `openai_client.py` を追加した。
+
+`Job` を入力として受け取り、`Prompt Builder` で生成したプロンプトをOpenAI APIへ送信し、JSONレスポンスを `AnalysisResult` に変換する構成とした。
+
+## 日付
+
+2026-07-01
+
+### 理由
+
+- Prompt BuilderとAnalysisResultモデルを活用できる
+- AI分析処理を `openai_client.py` に集約できる
+- main.pyからは `analyze_job(job)` を呼び出すだけで済む
+- 将来的なモデル変更やプロンプト改善に対応しやすい
+
+### 結果
+
+- OpenAI APIへの接続に成功
+- JobをAIに分析させ、JSONレスポンスを取得できた
+- JSONレスポンスをAnalysisResultへ変換できた
+
 # Decision 005 - Decision: CrowdWorks検索結果はDOM構造ではなく、#vue-container の data 属性に格納されたJSONを解析する方式を採用する。
 ## 日付
 

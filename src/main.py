@@ -20,35 +20,35 @@ def main():
     output_dir = current_dir.parent / config.OUTPUT_DIR
     output_dir.mkdir(parents=True, exist_ok=True)
 
-    # ### Pipline: 案件情報の取得
-    # html = fetch_html(config.CW_JOB_LIST_URL)
+    ### Pipline: 案件情報の取得
+    html = fetch_html(config.CW_JOB_LIST_URL)
 
-    # ### Pipline: 案件情報の解析
-    # jobs = parse_jobs(html)
+    ### Pipline: 案件情報の解析
+    jobs = parse_jobs(html)
 
-    # ### Pipline: 案件詳細情報の解析
-    # for job in jobs:
-    #     detail_html = fetch_html(job.url)
-    #     parse_job_detail(job, detail_html)
+    ### Pipline: 案件詳細情報の解析
+    for job in jobs:
+        detail_html = fetch_html(job.url)
+        parse_job_detail(job, detail_html)
 
-    # ### Pipline: 案件情報の JSON ファイルへの保存
-    # current_dir = Path(__file__).resolve().parent
-    # output_dir = current_dir.parent / config.OUTPUT_DIR
-    # output_dir.mkdir(parents=True, exist_ok=True)
-    # export_jobs_to_json(jobs, output_dir / "jobs.json")
+    ### Pipline: 案件情報の JSON ファイルへの保存
+    current_dir = Path(__file__).resolve().parent
+    output_dir = current_dir.parent / config.OUTPUT_DIR
+    output_dir.mkdir(parents=True, exist_ok=True)
+    export_jobs_to_json(jobs, output_dir / "jobs.json")
 
-    # ### Pipline: 案件情報の JSON ファイルからの読み込み
-    # jobs = load_jobs_from_json(output_dir / "jobs.json")
+    ### Pipline: 案件情報の JSON ファイルからの読み込み
+    jobs = load_jobs_from_json(output_dir / "jobs.json")
 
-    # ### Pipline: 案件情報の分析
-    # export_results = []
-    # for job in jobs[:2]:
-    #     result = analyze_job(job)
-    #     export_results.append(build_job_analysis_item(job, result))
-    #     print(result)
+    ### Pipline: 案件情報の分析
+    export_results = []
+    for job in jobs[:2]:
+        result = analyze_job(job)
+        export_results.append(build_job_analysis_item(job, result))
+        print(result)
 
-    # ### Pipline: 案件情報の分析結果の JSON ファイルへの保存
-    # export_job_analysis_results(export_results, output_dir / "analysis_results.json")
+    ### Pipline: 案件情報の分析結果の JSON ファイルへの保存
+    export_job_analysis_results(export_results, output_dir / "analysis_results.json")
 
     ### Pipline: 案件情報の分析結果の JSON ファイルからの読み込み
     with open(output_dir / "analysis_results.json", "r", encoding="utf-8") as f:

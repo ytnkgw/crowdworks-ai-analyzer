@@ -1,3 +1,27 @@
+## [Unreleased]
+### Data
+2026年7月1日
+### Added
+
+- ランキング済み案件をターミナル上で見やすく表示する機能を追加
+- `output/ranked_jobs.json` を読み込み、上位案件を表示できるようにした
+- ランキング済み案件1件を表示用文字列に変換する `format_ranked_job()` を追加
+- 複数件のランキング済み案件を表示用文字列に変換する `format_ranked_jobs()` を追加
+- `rank`、`total_score`、案件タイトル、URLを表示できるようにした
+- おすすめ理由、注意点、応募戦略、総評を表示できるようにした
+- 空のランキング結果に対応した表示処理を追加
+- Ranking Summary Displayのテストを追加
+
+### Verified
+
+- `ranked_jobs.json` を読み込み、表示用関数へ渡せることを確認
+- 上位案件をrank順にターミナル表示できることを確認
+- `rank`、`total_score`、案件タイトル、URLが表示されることを確認
+- `recommendation_reasons`、`concerns`、`application_strategy`、`overall_comment` が表示されることを確認
+- 表示件数の指定が反映されることを確認
+- 空配列を渡した場合でもエラーにならないことを確認
+
+
 ## [0.2.0]
 ### Data
 2026年7月1日

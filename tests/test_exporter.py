@@ -4,7 +4,11 @@ from pathlib import Path
 
 sys.path.append(str(Path(__file__).resolve().parents[1] / "src"))
 
-from exporter import build_job_analysis_item, export_job_analysis_results
+from exporter import (
+    build_job_analysis_item,
+    export_job_analysis_results,
+    export_jobs_to_json,
+)
 from models import AnalysisResult, Job
 
 
@@ -64,3 +68,34 @@ def test_export_job_analysis_results_writes_expected_json(tmp_path: Path) -> Non
     written = json.loads(output_path.read_text(encoding="utf-8"))
 
     assert written == items
+
+
+def test_export_jobs_to_json_includes_detail_fields(tmp_path: Path) -> None:
+    jobs = [
+        Job(
+            id=13253877,
+            title="案件タイトル",
+            url="https://crowdworks.jp/public/jobs/13253877",
+            description="案件詳細本文",
+            reward="ワーカーと相談する",
+            application_deadline="2026年07月05日",
+            published_at="2026年06月21日",
+            application_count=9,
+            recruitment_count=1,
+        )
+    ]
+
+    output_path = tmp_path / "jobs.json"
+    export_jobs_to_json(jobs, output_path)
+
+    written = json.loads(output_path.read_text(encoding="utf-8"))
+
+    assert written[0]["id"] == 13253877
+    assert written[0]["title"] == "案件タイトル"
+    assert written[0]["url"] == "https://crowdworks.jp/public/jobs/13253877"
+    assert written[0]["description"] == "案件詳細本文"
+    assert written[0]["reward"] == "ワーカーと相談する"
+    assert written[0]["application_deadline"] == "2026年07月05日"
+    assert written[0]["published_at"] == "2026年06月21日"
+    assert written[0]["application_count"] == 9
+    assert written[0]["recruitment_count"] == 1

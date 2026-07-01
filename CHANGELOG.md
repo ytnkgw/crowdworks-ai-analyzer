@@ -1,3 +1,23 @@
+## [0.3.1] - 2026-07-01
+
+### Added
+
+#### URL-based Job Collection
+
+- CrowdWorksの案件一覧URLから案件収集を行う `--collect-jobs` オプションを追加
+- `--url` オプションで対象URLを指定できるようにした
+- `--limit` で取得件数を制限できるようにした
+- 指定URLから一覧HTMLと詳細HTMLを取得し、詳細情報付きのJob配列を生成できるようにした
+- 収集結果を `output/jobs.json` にUTF-8・インデント付きJSONで保存できるようにした
+- CLI・コレクター・エクスポートのテストを追加
+
+### Verified
+
+- `--collect-jobs --url <URL>` で案件収集を実行できることを確認
+- `--collect-jobs` 指定時に `--url` 未指定でエラーが表示されることを確認
+- `limit` 指定時に取得件数が制限されることを確認
+- 収集結果が `output/jobs.json` に保存されることを確認
+
 ## [0.3.0] - 2026-07-01
 
 ### Added

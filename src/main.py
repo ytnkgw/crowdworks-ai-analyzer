@@ -16,12 +16,25 @@ from parser import parse_job_detail
 from ranking import rank_job_analysis_results
 from ranking_display import format_ranked_jobs
 from report_exporter import export_ranked_jobs_report
+from job_collector import collect_jobs_from_url
 
 
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         prog="python3 src/main.py",
         description="CrowdWorks AI Analyzer",
+    )
+
+    parser.add_argument(
+        "--collect-jobs",
+        action="store_true",
+        help="指定したCrowdWorks URLから案件一覧と詳細情報を取得して jobs.json を生成する",
+    )
+
+    parser.add_argument(
+        "--url",
+        type=str,
+        help="案件一覧を取得するCrowdWorks URL",
     )
 
     parser.add_argument(
@@ -45,8 +58,8 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument(
         "--limit",
         type=int,
-        default=5,
-        help="表示・出力する上位件数を指定する（default: 5）",
+        default=50,
+        help="表示・出力する上位件数を指定する（default: 50）",
     )
 
     return parser
@@ -61,7 +74,12 @@ def main(argv: list[str] | None = None) -> int:
     parser = build_parser()
     args = parser.parse_args(argv)
 
-    if not any([args.rank, args.display_ranking, args.export_report]):
+    if args.collect_jobs and not args.url:
+        parser.error("--collect-jobs を使用する場合は --url を指定してください。")
+
+    if not any(
+        [args.rank, args.display_ranking, args.export_report, args.collect_jobs]
+    ):
         parser.print_help()
         return 0
 
@@ -69,22 +87,13 @@ def main(argv: list[str] | None = None) -> int:
     output_dir = current_dir.parent / config.OUTPUT_DIR
     output_dir.mkdir(parents=True, exist_ok=True)
 
-    # ### Pipline: 案件情報の取得
-    # html = fetch_html(config.CW_JOB_LIST_URL)
-
-    # ### Pipline: 案件情報の解析
-    # jobs = parse_jobs(html)
-
-    # ### Pipline: 案件詳細情報の解析
-    # for job in jobs:
-    #     detail_html = fetch_html(job.url)
-    #     parse_job_detail(job, detail_html)
-
-    # ### Pipline: 案件情報の JSON ファイルへの保存
-    # current_dir = Path(__file__).resolve().parent
-    # output_dir = current_dir.parent / config.OUTPUT_DIR
-    # output_dir.mkdir(parents=True, exist_ok=True)
-    # export_jobs_to_json(jobs, output_dir / "jobs.json")
+    ### Pipline: 案件情報の収集と JSON ファイルへの保存
+    if args.collect_jobs:
+        jobs = collect_jobs_from_url(args.url, limit=args.limit)
+        export_jobs_to_json(jobs, output_dir / "jobs.json")
+        print(f"Collected {len(jobs)} jobs.")
+        print("Saved to output/jobs.json")
+        return 0
 
     # ### Pipline: 案件情報の JSON ファイルからの読み込み
     # jobs = load_jobs_from_json(output_dir / "jobs.json")
@@ -98,11 +107,10 @@ def main(argv: list[str] | None = None) -> int:
     # ### Pipline: 案件情報の分析結果の JSON ファイルへの保存
     # export_job_analysis_results(export_results, output_dir / "analysis_results.json")
 
+    ### Pipline: 案件情報の分析結果の JSON ファイルからの読み込み
+    ### Pipline: 案件情報の分析結果のランキング付け
+    ### Pipline: 案件情報の分析結果のランキング付けの JSON ファイルへの保存
     ranked_job_items: list[dict] = []
-
-    # ### Pipline: 案件情報の分析結果の JSON ファイルからの読み込み
-    # ### Pipline: 案件情報の分析結果のランキング付け
-    # ### Pipline: 案件情報の分析結果のランキング付けの JSON ファイルへの保存
     if args.rank:
         analysis_results_path = output_dir / "analysis_results.json"
         analysis_results = load_json(analysis_results_path)
@@ -110,7 +118,6 @@ def main(argv: list[str] | None = None) -> int:
         export_ranked_job_analysis_results(
             ranked_job_items, output_dir / "ranked_jobs.json"
         )
-
     ### Pipline: 案件情報の分析結果のランキング付けの JSON ファイルからの読み込み
     if not ranked_job_items and (output_dir / "ranked_jobs.json").exists():
         ranked_job_items = load_json(output_dir / "ranked_jobs.json")

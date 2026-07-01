@@ -458,6 +458,8 @@ python3 src/main.py [options]
 
 | オプション | 内容 |
 |---|---|
+| `--collect-jobs` | 指定した検索結果URLから案件を収集し、`jobs.json` を出力する |
+| `--url` | `--collect-jobs` 実行時に対象となるCrowdWorksの検索結果URLを指定する |
 | `--rank` | `analysis_results.json` から `ranked_jobs.json` を生成する |
 | `--display-ranking` | ランキング結果をターミナルに表示する |
 | `--export-report` | ランキング結果をMarkdownレポートとして出力する |
@@ -466,6 +468,12 @@ python3 src/main.py [options]
 ---
 
 ### 実行例
+
+案件を収集して `jobs.json` を出力する。
+
+```bash
+python3 src/main.py --collect-jobs --url "https://crowdworks.jp/public/jobs/search?category_id=..."
+```
 
 ランキングJSONを生成する。
 
@@ -509,6 +517,7 @@ python3 src/main.py --rank --display-ranking --export-report --limit 5
 
 | ファイル | 内容 |
 |---|---|
+| `output/jobs.json` | 収集した案件データ（詳細情報含む） |
 | `output/ranked_jobs.json` | ランキング済み案件データ |
 | `output/ranked_jobs_report.md` | Markdown形式のランキングレポート |
 
@@ -516,7 +525,8 @@ python3 src/main.py --rank --display-ranking --export-report --limit 5
 
 ### 備考
 
-オプションを指定しない場合は、ヘルプを表示して終了します。
+- オプションを指定しない場合は、ヘルプを表示して終了します。
+- `--collect-jobs` を使用する場合は `--url` の指定が必須です。
 
 
 ## Vision

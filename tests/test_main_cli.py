@@ -3,6 +3,7 @@ import json
 import sys
 from contextlib import redirect_stdout
 from pathlib import Path
+from typing import TypedDict
 
 import pytest
 
@@ -10,6 +11,12 @@ sys.path.append(str(Path(__file__).resolve().parents[1] / "src"))
 
 import config
 import main
+import job_collector
+
+
+class _CollectedArgs(TypedDict):
+    url: str | None
+    limit: int | None
 
 
 def test_build_parser_defines_expected_flags() -> None:
@@ -248,6 +255,56 @@ def test_main_shows_help_and_skips_work_when_no_options(
     assert "default: 5" in help_output.getvalue()
     assert not (output_dir / "ranked_jobs.json").exists()
     assert not (output_dir / "ranked_jobs_report.md").exists()
+
+
+def test_build_parser_supports_collect_jobs_and_url() -> None:
+    parser = main.build_parser()
+    args = parser.parse_args(["--collect-jobs", "--url", "https://example.com/jobs"])
+
+    assert args.collect_jobs is True
+    assert args.url == "https://example.com/jobs"
+
+
+def test_main_collect_jobs_requires_url(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    output_dir = tmp_path / "output"
+    output_dir.mkdir()
+    monkeypatch.setattr(config, "OUTPUT_DIR", str(output_dir))
+
+    with pytest.raises(SystemExit) as exc_info:
+        main.main(["--collect-jobs"])
+
+    assert exc_info.value.code == 2
+    captured = capsys.readouterr()
+    assert "--collect-jobs を使用する場合は --url を指定してください。" in captured.err
+
+
+def test_main_collect_jobs_passes_limit_to_collector(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    output_dir = tmp_path / "output"
+    output_dir.mkdir()
+    monkeypatch.setattr(config, "OUTPUT_DIR", str(output_dir))
+
+    captured: _CollectedArgs = {"url": None, "limit": None}
+
+    def fake_collect_jobs_from_url(
+        url: str, limit: int | None = None
+    ) -> list[job_collector.Job]:
+        captured["url"] = url
+        captured["limit"] = limit
+        return []
+
+    monkeypatch.setattr(main, "collect_jobs_from_url", fake_collect_jobs_from_url)
+
+    exit_code = main.main(
+        ["--collect-jobs", "--url", "https://example.com/jobs", "--limit", "2"]
+    )
+
+    assert exit_code == 0
+    assert captured["url"] == "https://example.com/jobs"
+    assert captured["limit"] == 2
 
 
 def test_main_runs_rank_display_and_report_flow(

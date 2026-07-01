@@ -76,7 +76,17 @@ def parse_job_detail(job: Job, html: str) -> Job:
         td = row.find("td")
         if th and td:
             summary[th.get_text(strip=True)] = td.get_text(strip=True)
-    job.reward = summary.get("固定報酬制")
+    job.reward = None
+    for reward_type in ("固定報酬制", "時間単価制"):
+        matched_key = next(
+            (key for key in summary.keys() if reward_type in key),
+            None,
+        )
+        if matched_key:
+            reward_value = summary.get(matched_key)
+            if reward_value:
+                job.reward = f"{reward_type} : {reward_value}"
+                break
     job.published_at = summary.get("掲載日")
     job.application_deadline = summary.get("応募期限")
 

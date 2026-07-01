@@ -1,3 +1,4 @@
+import argparse
 import json
 import config
 from pathlib import Path
@@ -14,9 +15,56 @@ from parser import parse_jobs
 from parser import parse_job_detail
 from ranking import rank_job_analysis_results
 from ranking_display import format_ranked_jobs
+from report_exporter import export_ranked_jobs_report
 
 
-def main():
+def build_parser() -> argparse.ArgumentParser:
+    parser = argparse.ArgumentParser(
+        prog="python3 src/main.py",
+        description="CrowdWorks AI Analyzer",
+    )
+
+    parser.add_argument(
+        "--rank",
+        action="store_true",
+        help="分析結果をランキングして output/ranked_jobs.json を生成する",
+    )
+
+    parser.add_argument(
+        "--display-ranking",
+        action="store_true",
+        help="ランキング結果をターミナルに表示する",
+    )
+
+    parser.add_argument(
+        "--export-report",
+        action="store_true",
+        help="ランキング結果をMarkdownレポートとして出力する",
+    )
+
+    parser.add_argument(
+        "--limit",
+        type=int,
+        default=5,
+        help="表示・出力する上位件数を指定する（default: 5）",
+    )
+
+    return parser
+
+
+def load_json(path: str | Path) -> list[dict]:
+    with open(path, "r", encoding="utf-8") as f:
+        return json.load(f)
+
+
+def main(argv: list[str] | None = None) -> int:
+    parser = build_parser()
+    args = parser.parse_args(argv)
+
+    if not any([args.rank, args.display_ranking, args.export_report]):
+        parser.print_help()
+        return 0
+
     current_dir = Path(__file__).resolve().parent
     output_dir = current_dir.parent / config.OUTPUT_DIR
     output_dir.mkdir(parents=True, exist_ok=True)
@@ -50,23 +98,37 @@ def main():
     # ### Pipline: 案件情報の分析結果の JSON ファイルへの保存
     # export_job_analysis_results(export_results, output_dir / "analysis_results.json")
 
+    ranked_job_items: list[dict] = []
+
     # ### Pipline: 案件情報の分析結果の JSON ファイルからの読み込み
-    # with open(output_dir / "analysis_results.json", "r", encoding="utf-8") as f:
-    #     loaded_results = json.load(f)
-
     # ### Pipline: 案件情報の分析結果のランキング付け
-    # ranked_results = rank_job_analysis_results(loaded_results)
-
     # ### Pipline: 案件情報の分析結果のランキング付けの JSON ファイルへの保存
-    # export_ranked_job_analysis_results(ranked_results, output_dir / "ranked_jobs.json")
+    if args.rank:
+        analysis_results_path = output_dir / "analysis_results.json"
+        analysis_results = load_json(analysis_results_path)
+        ranked_job_items = rank_job_analysis_results(analysis_results)
+        export_ranked_job_analysis_results(
+            ranked_job_items, output_dir / "ranked_jobs.json"
+        )
 
     ### Pipline: 案件情報の分析結果のランキング付けの JSON ファイルからの読み込み
-    with open(output_dir / "ranked_jobs.json", "r", encoding="utf-8") as f:
-        ranked_job_items = json.load(f)
+    if not ranked_job_items and (output_dir / "ranked_jobs.json").exists():
+        ranked_job_items = load_json(output_dir / "ranked_jobs.json")
 
     ### Pipline: ランキング結果の表示用整形
-    ranked_text = format_ranked_jobs(ranked_job_items, 2)
-    print(ranked_text)
+    if args.display_ranking:
+        ranked_text = format_ranked_jobs(ranked_job_items, args.limit)
+        print(ranked_text)
+
+    ### Pipline: ランキング結果の Markdown レポート出力
+    if args.export_report:
+        export_ranked_jobs_report(
+            ranked_job_items,
+            str(output_dir / "ranked_jobs_report.md"),
+            limit=args.limit,
+        )
+
+    return 0
 
 
 def load_jobs_from_json(file_path: str | Path) -> list[Job]:
@@ -100,4 +162,4 @@ def load_debug_html(filename: str) -> str:
 
 
 if __name__ == "__main__":
-    main()
+    raise SystemExit(main())

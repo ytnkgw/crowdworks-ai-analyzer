@@ -3,6 +3,56 @@
 2026年7月1日
 ### Added
 
+- `main.py` にCLIオプションを追加
+- `--rank` オプションで `analysis_results.json` から `ranked_jobs.json` を生成できるようにした
+- `--display-ranking` オプションでランキング結果をターミナル表示できるようにした
+- `--export-report` オプションでMarkdownレポートを出力できるようにした
+- `--limit` オプションで表示・出力件数を指定できるようにした
+- 複数オプションを同時に指定できるようにした
+- オプション未指定時はヘルプを表示して終了するようにした
+- CLI引数パースのテストを追加
+
+### Verified
+
+- `--rank` で `output/ranked_jobs.json` を生成できることを確認
+- `--display-ranking` でランキング結果をターミナル表示できることを確認
+- `--export-report` で `output/ranked_jobs_report.md` を出力できることを確認
+- `--limit` で表示・出力件数を変更できることを確認
+- `--rank --display-ranking --export-report` の同時指定ができることを確認
+- オプション未指定時にヘルプが表示され、予期しない処理が実行されないことを確認
+
+
+## [Unreleased]
+### Data
+2026年7月1日
+### Added
+
+- ランキング済み案件をMarkdown形式のレポートとして出力する機能を追加
+- `output/ranked_jobs.json` を読み込み、`output/ranked_jobs_report.md` を生成できるようにした
+- ランキング済み案件1件をMarkdown形式に変換する `format_ranked_job_as_markdown()` を追加
+- 複数件のランキング済み案件をMarkdownレポート形式に変換する `format_ranked_jobs_report()` を追加
+- Markdownレポートをファイル出力する `export_ranked_jobs_report()` を追加
+- レポートにSummary、案件情報、スコア表、おすすめ理由、注意点、応募戦略、総評を出力できるようにした
+- 空のランキング結果に対応したMarkdown出力を追加
+- Markdown Report Exportのテストを追加
+
+### Verified
+
+- `ranked_jobs.json` を読み込み、Markdownレポート化できることを確認
+- `rank`、`total_score`、案件タイトル、URLがMarkdownに出力されることを確認
+- 各スコアがMarkdownテーブルとして出力されることを確認
+- `recommendation_reasons`、`concerns`、`application_strategy` が箇条書きで出力されることを確認
+- `overall_comment` が出力されることを確認
+- 出力件数の指定が反映されることを確認
+- 空配列を渡した場合でもエラーにならないことを確認
+- `output/ranked_jobs_report.md` がUTF-8で保存されることを確認
+
+
+## [Unreleased]
+### Data
+2026年7月1日
+### Added
+
 - ランキング済み案件をターミナル上で見やすく表示する機能を追加
 - `output/ranked_jobs.json` を読み込み、上位案件を表示できるようにした
 - ランキング済み案件1件を表示用文字列に変換する `format_ranked_job()` を追加

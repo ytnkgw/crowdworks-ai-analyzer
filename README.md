@@ -317,6 +317,208 @@ AIスキルとの親和性が高く、応募価値の高い案件です。
 - ランキング結果が空の場合は、エラーではなく `ランキング結果がありません。` と表示されます。
 - この機能は新しいファイルを出力せず、ターミナル表示のみを行います。
 
+
+## Markdownレポート出力
+
+`output/ranked_jobs.json` に保存されたランキング済み案件を、Markdown形式のレポートとして出力できます。
+
+この機能では、AI分析済み・ランキング済みの案件情報を読み込み、応募判断に必要な情報をあとから見返しやすいMarkdownファイルとして保存します。
+
+---
+
+### 実行方法
+
+```bash
+python3 src/main.py
+```
+
+---
+
+### 入力ファイル
+
+Markdownレポート出力では、以下のファイルを読み込みます。
+
+```text
+output/ranked_jobs.json
+```
+
+このファイルには、AI分析結果をもとに `total_score` 順でランキングされた案件情報が保存されています。
+
+---
+
+### 出力先
+
+Markdownレポートは以下のファイルに保存されます。
+
+```text
+output/ranked_jobs_report.md
+```
+
+出力先ディレクトリが存在しない場合は、自動で作成されます。
+
+---
+
+### レポート内容
+
+Markdownレポートには、各案件について以下の情報が出力されます。
+
+| 項目 | 内容 |
+|---|---|
+| `rank` | 応募優先度ランキング |
+| `total_score` | AIによる総合評価点 |
+| `title` | 案件タイトル |
+| `url` | CrowdWorks案件URL |
+| `reward_score` | 報酬の魅力度 |
+| `competition_score` | 応募しやすさ |
+| `ai_score` | AIとの親和性 |
+| `continuity_score` | 継続案件となる可能性 |
+| `quality_score` | 案件品質 |
+| `recommendation_reasons` | 応募をおすすめする理由 |
+| `concerns` | 応募前に注意すべき点 |
+| `application_strategy` | 採用率を高めるための応募戦略 |
+| `overall_comment` | 案件全体の総評 |
+
+---
+
+### 出力例
+
+```markdown
+# CrowdWorks Job Ranking Report
+
+## Summary
+
+- Total Jobs: 3
+- Displayed Jobs: 3
+
+---
+
+## #1 91点
+
+### 案件情報
+
+- Title: 【サッカー好き歓迎】AIアパレルデザイン＆AI女性モデルを活用したSNSプロモーション担当募集！
+- URL: https://crowdworks.jp/public/jobs/12345678
+
+### スコア
+
+| 項目 | 点数 |
+|---|---:|
+| 報酬 | 4 |
+| 競争率 | 3 |
+| AI適性 | 5 |
+| 継続案件 | 4 |
+| 案件品質 | 5 |
+| 総合評価 | 91 |
+
+### おすすめ理由
+
+- 生成AIを活用できる案件である
+- 継続案件の可能性が高い
+
+### 注意点
+
+- 応募人数が多く競争率が高い
+
+### 応募戦略
+
+- AI活用経験を具体例付きでアピールする
+
+### 総評
+
+AIスキルとの親和性が高く、応募価値の高い案件です。
+
+---
+```
+
+---
+
+### 備考
+
+- デフォルトでは上位5件をレポート出力します。
+- 出力件数は引数で指定できます。
+- ランキング結果が空の場合は、`ランキング結果がありません。` を含むMarkdownが出力されます。
+- MarkdownはUTF-8で保存されます。
+- 日本語はエスケープされず、そのまま読める形式で保存されます。
+- `ranked_jobs_report.md` は、応募候補の比較や後からの振り返りに利用できます。
+
+
+## CLIオプション
+
+`main.py` では、実行する処理をCLIオプションで指定できます。
+
+### 使い方
+
+```bash
+python3 src/main.py [options]
+```
+
+---
+
+### オプション一覧
+
+| オプション | 内容 |
+|---|---|
+| `--rank` | `analysis_results.json` から `ranked_jobs.json` を生成する |
+| `--display-ranking` | ランキング結果をターミナルに表示する |
+| `--export-report` | ランキング結果をMarkdownレポートとして出力する |
+| `--limit` | 表示・出力する上位件数を指定する |
+
+---
+
+### 実行例
+
+ランキングJSONを生成する。
+
+```bash
+python3 src/main.py --rank
+```
+
+ランキング結果をターミナルに表示する。
+
+```bash
+python3 src/main.py --display-ranking
+```
+
+上位10件をターミナルに表示する。
+
+```bash
+python3 src/main.py --display-ranking --limit 10
+```
+
+Markdownレポートを出力する。
+
+```bash
+python3 src/main.py --export-report
+```
+
+上位10件のMarkdownレポートを出力する。
+
+```bash
+python3 src/main.py --export-report --limit 10
+```
+
+ランキング生成・表示・レポート出力をまとめて実行する。
+
+```bash
+python3 src/main.py --rank --display-ranking --export-report --limit 5
+```
+
+---
+
+### 出力ファイル
+
+| ファイル | 内容 |
+|---|---|
+| `output/ranked_jobs.json` | ランキング済み案件データ |
+| `output/ranked_jobs_report.md` | Markdown形式のランキングレポート |
+
+---
+
+### 備考
+
+オプションを指定しない場合は、ヘルプを表示して終了します。
+
+
 ## Vision
 
 [docs/vision.md](/docs/vision.md)

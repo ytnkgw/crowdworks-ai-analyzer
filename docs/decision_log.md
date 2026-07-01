@@ -3,6 +3,27 @@
 このドキュメントでは、本プロジェクトにおける重要な設計判断（Architecture Decision）を記録する。
 
 ---
+# Decision 007 - AI分析結果をJob情報と紐づけてJSON Exportする
+
+OpenAI APIで取得した `AnalysisResult` は、単体ではなく `Job` 情報と紐づけた形式で `output/analysis_results.json` に保存する。
+
+## 日付
+
+2026-07-01
+
+## Reason
+
+- 分析結果だけでは、どの案件に対する評価なのか分かりにくい
+- Job ID、タイトル、URLを一緒に保存することで、後から確認しやすくなる
+- 次のランキング機能で `total_score` をもとに並び替えやすくなる
+- 将来的なUI表示やCSV出力にも利用しやすい
+
+## Result
+
+- `Job` と `AnalysisResult` をセットにしたJSON出力が可能になった
+- 1件および複数件の分析結果を保存できることを確認した
+- `output/analysis_results.json` を次フェーズの入力データとして利用できる状態になった
+
 
 # Decision　006 - OpenAI Clientを導入する
 

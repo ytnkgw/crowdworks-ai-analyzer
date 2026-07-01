@@ -1,6 +1,11 @@
+import json
 import config
 from pathlib import Path
-from exporter import export_jobs_to_json
+from exporter import (
+    build_job_analysis_item,
+    export_job_analysis_results,
+    export_jobs_to_json,
+)
 from fetcher import fetch_html
 from models import Job
 from openai_client import analyze_job
@@ -9,60 +14,64 @@ from parser import parse_job_detail
 
 
 def main():
-
-    html = fetch_html(config.CW_JOB_LIST_URL)
-
-    jobs = parse_jobs(html)
-
-    for job in jobs:
-        detail_html = fetch_html(job.url)
-        parse_job_detail(job, detail_html)
-
-    # 確認
-    # for job in jobs:
-    #     print(job)
-
-    # デバッグ用に JSON ファイルとして保存
     current_dir = Path(__file__).resolve().parent
-    debug_dir = current_dir.parent / config.OUTPUT_DIR
-    debug_dir.mkdir(parents=True, exist_ok=True)
-    export_jobs_to_json(jobs, debug_dir / "jobs.json")
+    output_dir = current_dir.parent / config.OUTPUT_DIR
+    output_dir.mkdir(parents=True, exist_ok=True)
 
-    # if jobs and jobs:
-    #     first_job = jobs[0]
-    #     result = analyze_job(first_job)
-    #     print(result)
+    # ### Pipline: 案件情報の取得
+    # html = fetch_html(config.CW_JOB_LIST_URL)
 
-    # # 1. 実行ファイルから見た「1つ上の階層のdebugフォルダ」を定義
-    # # （__file__ はこのPythonファイル自身の場所を指します）
-    # current_dir = Path(__file__).resolve().parent
-    # debug_dir = current_dir.parent / config.DEBUG_DIR
-
-    # # 2. フォルダがなければ自動作成
-    # debug_dir.mkdir(parents=True, exist_ok=True)
-
-    # # 3. ファイルのパスを指定して書き込み
-    # file_path = debug_dir / config.HTML_FILENAME
-    # with open(
-    #     # "../debug/crowdworks_ai_bpo.html",
-    #     file_path,
-    #     "w",
-    #     encoding="utf-8",
-    # ) as f:
-    #     f.write(html)
-
-    # parse.pyのデバッグ
+    # ### Pipline: 案件情報の解析
     # jobs = parse_jobs(html)
-    # print(f"{len(jobs)}件")
+
+    # ### Pipline: 案件詳細情報の解析
     # for job in jobs:
-    #     print(job)
-    # html = read_debug_html("cw_job_detail.html")
-    # job = Job(id=0, title="テスト案件", url="")
-    # job = parse_job_detail(job, html)
-    # print(job)
+    #     detail_html = fetch_html(job.url)
+    #     parse_job_detail(job, detail_html)
+
+    # ### Pipline: 案件情報の JSON ファイルへの保存
+    # current_dir = Path(__file__).resolve().parent
+    # output_dir = current_dir.parent / config.OUTPUT_DIR
+    # output_dir.mkdir(parents=True, exist_ok=True)
+    # export_jobs_to_json(jobs, output_dir / "jobs.json")
+
+    ### Pipline: 案件情報の JSON ファイルからの読み込み
+    jobs = load_jobs_from_json(output_dir / "jobs.json")
+
+    ### Pipline: 案件情報の分析
+    export_results = []
+    for job in jobs[:2]:
+        result = analyze_job(job)
+        export_results.append(build_job_analysis_item(job, result))
+        print(result)
+
+    ### Pipline: 案件情報の分析結果の JSON ファイルへの保存
+    export_job_analysis_results(export_results, output_dir / "analysis_results.json")
 
 
-def read_debug_html(filename: str) -> str:
+def load_jobs_from_json(file_path: str | Path) -> list[Job]:
+    """JSON ファイルから Job オブジェクトの配列を読み込みます。"""
+    path = Path(file_path)
+    with path.open("r", encoding="utf-8") as f:
+        raw_jobs = json.load(f)
+
+    return [
+        Job(
+            id=item["id"],
+            title=item["title"],
+            url=item["url"],
+            description=item.get("description"),
+            reward=item.get("reward"),
+            application_deadline=item.get("application_deadline"),
+            published_at=item.get("published_at"),
+            application_count=item.get("application_count"),
+            recruitment_count=item.get("recruitment_count"),
+        )
+        for item in raw_jobs
+    ]
+
+
+def load_debug_html(filename: str) -> str:
     """debug フォルダから HTML ファイルを読み込みます。"""
     current_dir = Path(__file__).resolve().parent
     debug_path = current_dir.parent / config.DEBUG_DIR / filename

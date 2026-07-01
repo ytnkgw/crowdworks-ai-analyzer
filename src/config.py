@@ -15,3 +15,4 @@ HTML_FILENAME = "crowdworks_ai_bpo.html"
 REQUEST_TIMEOUT = 30
 
 OPENAI_API_KEY = os.getenv("CW_AI_ANALYZER_OPENAI_API_KEY", "")
+OPENAI_MODEL = "gpt-4o-mini"

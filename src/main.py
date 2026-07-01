@@ -3,6 +3,7 @@ from pathlib import Path
 from exporter import export_jobs_to_json
 from fetcher import fetch_html
 from models import Job
+from openai_client import analyze_job
 from parser import parse_jobs
 from parser import parse_job_detail
 
@@ -18,14 +19,19 @@ def main():
         parse_job_detail(job, detail_html)
 
     # 確認
-    for job in jobs:
-        print(job)
+    # for job in jobs:
+    #     print(job)
 
     # デバッグ用に JSON ファイルとして保存
     current_dir = Path(__file__).resolve().parent
     debug_dir = current_dir.parent / config.OUTPUT_DIR
     debug_dir.mkdir(parents=True, exist_ok=True)
     export_jobs_to_json(jobs, debug_dir / "jobs.json")
+
+    if jobs and jobs[0]:
+        first_job = jobs[0]
+        result = analyze_job(first_job)
+        print(result)
 
     # # 1. 実行ファイルから見た「1つ上の階層のdebugフォルダ」を定義
     # # （__file__ はこのPythonファイル自身の場所を指します）

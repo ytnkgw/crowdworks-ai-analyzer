@@ -212,8 +212,14 @@ CONSTRAINTS = """
 """.strip()
 
 
-def build_analysis_prompt(job: Job) -> str:
-    """案件情報から LLM へ渡す分析用プロンプトを生成する。"""
+def build_system_prompt() -> str:
+    """system role に渡すプロンプトを生成する。"""
+
+    return SYSTEM_PROMPT.strip()
+
+
+def build_user_prompt(job: Job) -> str:
+    """user role に渡すプロンプトを生成する。"""
 
     input_data = INPUT_TEMPLATE.format(
         title=job.title,
@@ -230,9 +236,6 @@ def build_analysis_prompt(job: Job) -> str:
     )
 
     return f"""
-# System Prompt
-{SYSTEM_PROMPT}
-
 # Input Data
 {input_data}
 
@@ -254,3 +257,9 @@ def build_analysis_prompt(job: Job) -> str:
 # Constraints
 {CONSTRAINTS}
 """.strip()
+
+
+def build_analysis_prompt(job: Job) -> str:
+    """案件情報から LLM へ渡す分析用プロンプトを生成する。"""
+
+    return build_system_prompt() + "\n\n" + build_user_prompt(job)

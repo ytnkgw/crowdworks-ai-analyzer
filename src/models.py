@@ -16,7 +16,9 @@ class Job:
     published_at: str | None = None
 
     application_count: int | None = None
+    contract_count: int | None = None
     recruitment_count: int | None = None
+    favorite_count: int | None = None
 
 
 @dataclass

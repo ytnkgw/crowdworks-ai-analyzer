@@ -156,7 +156,9 @@ def load_jobs_from_json(file_path: str | Path) -> list[Job]:
             application_deadline=item.get("application_deadline"),
             published_at=item.get("published_at"),
             application_count=item.get("application_count"),
+            contract_count=item.get("contract_count"),
             recruitment_count=item.get("recruitment_count"),
+            favorite_count=item.get("favorite_count"),
         )
         for item in raw_jobs
     ]

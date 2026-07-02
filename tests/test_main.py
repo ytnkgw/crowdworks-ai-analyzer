@@ -22,7 +22,9 @@ def test_load_jobs_from_json_creates_job_list(tmp_path: Path) -> None:
             "application_deadline": None,
             "published_at": None,
             "application_count": 2,
+            "contract_count": 0,
             "recruitment_count": 1,
+            "favorite_count": 42,
         }
     ]
     output_path.write_text(json.dumps(payload), encoding="utf-8")
@@ -34,3 +36,7 @@ def test_load_jobs_from_json_creates_job_list(tmp_path: Path) -> None:
     assert jobs[0].title == "テスト案件"
     assert jobs[0].category == "AI-BPO（AI活用の業務改善）"
     assert jobs[0].sub_category == "AIバックオフィス支援"
+    assert jobs[0].application_count == 2
+    assert jobs[0].contract_count == 0
+    assert jobs[0].recruitment_count == 1
+    assert jobs[0].favorite_count == 42

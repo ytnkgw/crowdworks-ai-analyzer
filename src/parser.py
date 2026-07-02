@@ -109,20 +109,25 @@ def parse_job_detail(job: Job, html: str) -> Job:
     job.published_at = summary.get("掲載日")
     job.application_deadline = summary.get("応募期限")
 
-    # 6. 応募状況 (応募した人、募集人数)
-    # class="application_status_table" のテーブルから抽出します
-    status = {}
-    for row in soup.find(
-        "table", class_="application_status_table"
-    ).find_all(  # pyright: ignore[reportOptionalMemberAccess]
-        "tr"
+    # 6. 応募状況 (応募した人、契約した人、募集人数、気になる！リスト)
+    # ラベル(th)を基準に抽出し、HTML構造変更に比較的強い実装にする
+    status: dict[str, str] = {}
+    for row in soup.select(
+        "section.application_status table.application_status_table tr"
     ):
         th = row.find("th")
         td = row.find("td")
-        if th and td:
-            status[th.get_text(strip=True)] = td.get_text(strip=True)
-    status_table = soup.find("table", class_="application_status_table")
+        if not th or not td:
+            continue
+
+        label = th.get_text(strip=True)
+        value = td.get_text(strip=True)
+        if label:
+            status[label] = value
+
     job.application_count = utils.extract_number(status.get("応募した人"))
+    job.contract_count = utils.extract_number(status.get("契約した人"))
     job.recruitment_count = utils.extract_number(status.get("募集人数"))
+    job.favorite_count = utils.extract_number(status.get("気になる！リスト"))
 
     return job

@@ -83,7 +83,9 @@ def test_export_jobs_to_json_includes_detail_fields(tmp_path: Path) -> None:
             application_deadline="2026年07月05日",
             published_at="2026年06月21日",
             application_count=9,
+            contract_count=0,
             recruitment_count=1,
+            favorite_count=42,
         )
     ]
 
@@ -102,4 +104,6 @@ def test_export_jobs_to_json_includes_detail_fields(tmp_path: Path) -> None:
     assert written[0]["application_deadline"] == "2026年07月05日"
     assert written[0]["published_at"] == "2026年06月21日"
     assert written[0]["application_count"] == 9
+    assert written[0]["contract_count"] == 0
     assert written[0]["recruitment_count"] == 1
+    assert written[0]["favorite_count"] == 42

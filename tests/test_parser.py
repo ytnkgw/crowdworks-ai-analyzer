@@ -23,3 +23,7 @@ def test_parse_job_detail_extracts_category_and_sub_category_from_breadcrumb() -
 
     assert parsed.category == "AI-BPO（AI活用の業務改善）"
     assert parsed.sub_category == "AIバックオフィス支援"
+    assert parsed.application_count == 27
+    assert parsed.contract_count == 0
+    assert parsed.recruitment_count == 3
+    assert parsed.favorite_count == 42

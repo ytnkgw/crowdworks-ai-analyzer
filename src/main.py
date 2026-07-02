@@ -9,6 +9,7 @@ from exporter import (
     export_jobs_to_json,
     export_ranked_job_analysis_results,
 )
+from deadline_filter import should_exclude_by_deadline, filter_expired_jobs
 from fetcher import fetch_html
 from models import Client, Job
 from openai_client import analyze_job
@@ -71,6 +72,71 @@ def load_json(path: str | Path) -> list[dict]:
         return json.load(f)
 
 
+def _filter_jobs_by_deadline(jobs: list[Job]) -> tuple[list[Job], int]:
+    filtered: list[Job] = []
+    skipped = 0
+
+    for job in jobs:
+        if should_exclude_by_deadline(job.application_deadline):
+            skipped += 1
+            continue
+        filtered.append(job)
+
+    return filtered, skipped
+
+
+def _fill_application_deadline_from_jobs_json(
+    output_dir: Path,
+    analysis_items: list[dict],
+) -> list[dict]:
+    jobs_path = output_dir / "jobs.json"
+    if not jobs_path.exists():
+        return analysis_items
+
+    try:
+        jobs_payload = load_json(jobs_path)
+    except (json.JSONDecodeError, OSError):
+        return analysis_items
+
+    deadline_by_id: dict[int, str | None] = {}
+    for job in jobs_payload:
+        if not isinstance(job, dict):
+            continue
+
+        job_id = job.get("id")
+        if isinstance(job_id, int):
+            deadline_by_id[job_id] = job.get("application_deadline")
+
+    hydrated: list[dict] = []
+    for item in analysis_items:
+        if not isinstance(item, dict):
+            hydrated.append(item)
+            continue
+
+        job = item.get("job")
+        if not isinstance(job, dict):
+            hydrated.append(item)
+            continue
+
+        if job.get("application_deadline"):
+            hydrated.append(item)
+            continue
+
+        job_id = job.get("id")
+        if not isinstance(job_id, int) or job_id not in deadline_by_id:
+            hydrated.append(item)
+            continue
+
+        new_job = dict(job)
+        new_job["application_deadline"] = deadline_by_id[job_id]
+
+        new_item = dict(item)
+        new_item["job"] = new_job
+        hydrated.append(new_item)
+
+    return hydrated
+
+
 def main(argv: list[str] | None = None) -> int:
     parser = build_parser()
     args = parser.parse_args(argv)
@@ -91,11 +157,15 @@ def main(argv: list[str] | None = None) -> int:
     ### Pipline: 案件情報の収集と JSON ファイルへの保存
     if args.collect_jobs:
         jobs = collect_jobs_from_url(args.url, limit=args.limit)
-        raw_output_path = save_raw_jobs(jobs, args.url, output_dir=output_dir)
-        export_jobs_to_json(jobs, output_dir / "jobs.json")
+        filtered_jobs, skipped_count = _filter_jobs_by_deadline(jobs)
+
+        raw_output_path = save_raw_jobs(filtered_jobs, args.url, output_dir=output_dir)
+        export_jobs_to_json(filtered_jobs, output_dir / "jobs.json")
         print(f"Saved raw jobs: {raw_output_path}")
         print(f"Saved pipeline jobs: {output_dir / 'jobs.json'}")
-        print(f"Collected {len(jobs)} jobs.")
+        if skipped_count > 0:
+            print(f"Skipped expired jobs: {skipped_count}")
+        print(f"Collected {len(filtered_jobs)} jobs.")
         return 0
 
     # ### Pipline: 案件情報の JSON ファイルからの読み込み
@@ -117,6 +187,13 @@ def main(argv: list[str] | None = None) -> int:
     if args.rank:
         analysis_results_path = output_dir / "analysis_results.json"
         analysis_results = load_json(analysis_results_path)
+        analysis_results = _fill_application_deadline_from_jobs_json(
+            output_dir, analysis_results
+        )
+        analysis_results, skipped_count = filter_expired_jobs(analysis_results)
+        if skipped_count > 0:
+            print(f"Skipped expired jobs: {skipped_count}")
+        export_job_analysis_results(analysis_results, analysis_results_path)
         ranked_job_items = rank_job_analysis_results(analysis_results)
         export_ranked_job_analysis_results(
             ranked_job_items, output_dir / "ranked_jobs.json"
@@ -124,6 +201,14 @@ def main(argv: list[str] | None = None) -> int:
     ### Pipline: 案件情報の分析結果のランキング付けの JSON ファイルからの読み込み
     if not ranked_job_items and (output_dir / "ranked_jobs.json").exists():
         ranked_job_items = load_json(output_dir / "ranked_jobs.json")
+
+    if ranked_job_items:
+        ranked_job_items, skipped_count = filter_expired_jobs(ranked_job_items)
+        if skipped_count > 0:
+            print(f"Skipped expired jobs: {skipped_count}")
+            export_ranked_job_analysis_results(
+                ranked_job_items, output_dir / "ranked_jobs.json"
+            )
 
     ### Pipline: ランキング結果の表示用整形
     if args.display_ranking:

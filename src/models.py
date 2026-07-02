@@ -6,6 +6,8 @@ class Job:
     id: int
     title: str
     url: str
+    category: str | None = None
+    sub_category: str | None = None
 
     description: str | None = None
     reward: str | None = None

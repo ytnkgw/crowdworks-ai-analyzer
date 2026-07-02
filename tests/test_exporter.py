@@ -76,6 +76,8 @@ def test_export_jobs_to_json_includes_detail_fields(tmp_path: Path) -> None:
             id=13253877,
             title="案件タイトル",
             url="https://crowdworks.jp/public/jobs/13253877",
+            category="AI-BPO（AI活用の業務改善）",
+            sub_category="AIバックオフィス支援",
             description="案件詳細本文",
             reward="ワーカーと相談する",
             application_deadline="2026年07月05日",
@@ -93,6 +95,8 @@ def test_export_jobs_to_json_includes_detail_fields(tmp_path: Path) -> None:
     assert written[0]["id"] == 13253877
     assert written[0]["title"] == "案件タイトル"
     assert written[0]["url"] == "https://crowdworks.jp/public/jobs/13253877"
+    assert written[0]["category"] == "AI-BPO（AI活用の業務改善）"
+    assert written[0]["sub_category"] == "AIバックオフィス支援"
     assert written[0]["description"] == "案件詳細本文"
     assert written[0]["reward"] == "ワーカーと相談する"
     assert written[0]["application_deadline"] == "2026年07月05日"

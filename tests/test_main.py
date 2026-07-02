@@ -15,6 +15,8 @@ def test_load_jobs_from_json_creates_job_list(tmp_path: Path) -> None:
             "id": 1,
             "title": "テスト案件",
             "url": "https://example.com/jobs/1",
+            "category": "AI-BPO（AI活用の業務改善）",
+            "sub_category": "AIバックオフィス支援",
             "description": "説明",
             "reward": "1000円",
             "application_deadline": None,
@@ -30,3 +32,5 @@ def test_load_jobs_from_json_creates_job_list(tmp_path: Path) -> None:
     assert len(jobs) == 1
     assert isinstance(jobs[0], Job)
     assert jobs[0].title == "テスト案件"
+    assert jobs[0].category == "AI-BPO（AI活用の業務改善）"
+    assert jobs[0].sub_category == "AIバックオフィス支援"

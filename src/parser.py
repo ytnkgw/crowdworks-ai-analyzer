@@ -48,6 +48,25 @@ def parse_jobs(html: str) -> list[Job]:
 def parse_job_detail(job: Job, html: str) -> Job:
     soup = BeautifulSoup(html, "html.parser")
 
+    # 0. カテゴリ / サブカテゴリ (パンくず)
+    # 末尾の「の仕事・求人」を取り除いて保存する
+    job.category = None
+    job.sub_category = None
+    for anchor in soup.select("ol.cw-breadcrumb li a"):
+        href_attr = anchor.get("href")
+        href = href_attr if isinstance(href_attr, str) else ""
+        text = anchor.get_text(strip=True)
+        if not text:
+            continue
+
+        normalized_text = text.removesuffix("の仕事・求人").strip()
+        value = normalized_text or None
+
+        if "/public/jobs/group/" in href and job.category is None:
+            job.category = value
+        elif "/public/jobs/category/" in href and job.sub_category is None:
+            job.sub_category = value
+
     # 1. 案件タイトル
     # h1タグのテキストから後ろの余分なサブタイトル（カテゴリ情報等）を削ぎ落として取得
     title_tag = soup.find("h1")

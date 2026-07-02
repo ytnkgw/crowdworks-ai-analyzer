@@ -3,12 +3,28 @@
 ### Changed
 - READMEをGitHub公開・ポートフォリオ向けに整理
 - CLIの実行方法、出力ファイル、開発ステータスを明確化
+- `--collect-jobs` 実行後に早期終了せず、`--analyze` 指定時は同一実行内で分析まで続行するように変更
+- `main.py` の collect / analyze / rank / display / report をそれぞれヘルパー関数へ分割
+- `jobs.json` 不在時の `--analyze` 処理を `try-except` ベースのハンドリングへ変更し、CLIメッセージを出して終了するように変更
+- 出力ファイル名（`jobs.json` / `analysis_results.json` / `ranked_jobs.json` / `ranked_jobs_report.md`）を `config.py` で管理するように変更
+- tests側でも出力ファイル名の文字列リテラルを `config` 定数参照に統一
+- README に `--analyze` の実行方法と出力先説明を追記
+- `main.py` 内の実行フェーズコメントを簡潔化
 
 ### Added
 - 応募期限が過去の案件を出力対象から除外するフィルタを追加
 - 応募期限判定をAsia/Tokyo基準で行うようにした
 - 匿名化サンプル出力の配置方針を追加
 - GitHub公開前の注意事項をREADMEに追加
+- `--analyze` オプションを正式なCLIフローとして追加
+- `--analyze --rank` の連続実行を想定したテストを追加
+- `--collect-jobs --analyze` 同時指定時の挙動を明示するテストを追加
+- `--analyze` 実行時に `jobs.json` が存在しない場合の挙動テストを追加
+
+### Verified
+- `tests/test_main_cli.py` が通過することを確認
+- 追加・更新した `--analyze` / `--rank` / `--collect-jobs` 関連テストが通過することを確認
+- `tests/test_exporter.py` / `tests/test_main.py` / `tests/test_report_exporter.py` が通過することを確認
 
 ### Security
 - 実案件データ、クライアント名、個人情報、APIキーを公開しない方針を明記

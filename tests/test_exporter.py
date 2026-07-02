@@ -94,6 +94,7 @@ def test_export_jobs_to_json_includes_detail_fields(tmp_path: Path) -> None:
                 rule_checked=False,
                 jobs_posted_count=32,
                 project_finished_rate=75,
+                profile_description="弊社沖縄発のSES企業でございます。",
             ),
         )
     ]
@@ -123,3 +124,7 @@ def test_export_jobs_to_json_includes_detail_fields(tmp_path: Path) -> None:
     assert written[0]["client"]["rule_checked"] is False
     assert written[0]["client"]["jobs_posted_count"] == 32
     assert written[0]["client"]["project_finished_rate"] == 75
+    assert (
+        written[0]["client"]["profile_description"]
+        == "弊社沖縄発のSES企業でございます。"
+    )

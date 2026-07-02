@@ -10,6 +10,7 @@ class Client:
     rule_checked: bool | None = None
     jobs_posted_count: int | None = None
     project_finished_rate: int | None = None
+    profile_description: str | None = None
 
 
 @dataclass

@@ -157,6 +157,7 @@ def load_jobs_from_json(file_path: str | Path) -> list[Job]:
                 rule_checked=client_data.get("rule_checked"),
                 jobs_posted_count=client_data.get("jobs_posted_count"),
                 project_finished_rate=client_data.get("project_finished_rate"),
+                profile_description=client_data.get("profile_description"),
             )
 
         jobs.append(

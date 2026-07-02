@@ -33,6 +33,7 @@ def test_load_jobs_from_json_creates_job_list(tmp_path: Path) -> None:
                 "rule_checked": False,
                 "jobs_posted_count": 32,
                 "project_finished_rate": 75,
+                "profile_description": "弊社沖縄発のSES企業でございます。",
             },
         }
     ]
@@ -57,3 +58,4 @@ def test_load_jobs_from_json_creates_job_list(tmp_path: Path) -> None:
     assert jobs[0].client.rule_checked is False
     assert jobs[0].client.jobs_posted_count == 32
     assert jobs[0].client.project_finished_rate == 75
+    assert jobs[0].client.profile_description == "弊社沖縄発のSES企業でございます。"

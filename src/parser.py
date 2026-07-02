@@ -46,6 +46,14 @@ def _to_bool(value: object) -> bool | None:
     return None
 
 
+def _to_optional_str(value: object) -> str | None:
+    if not isinstance(value, str):
+        return None
+
+    normalized = value.strip()
+    return normalized or None
+
+
 def _is_client_empty(client: Client) -> bool:
     return (
         client.id is None
@@ -55,6 +63,7 @@ def _is_client_empty(client: Client) -> bool:
         and client.rule_checked is None
         and client.jobs_posted_count is None
         and client.project_finished_rate is None
+        and client.profile_description is None
     )
 
 
@@ -89,16 +98,13 @@ def _extract_client_from_data_attr(soup: BeautifulSoup) -> Client | None:
 
     client = Client(
         id=_to_int(payload.get("userId")),
-        name=(
-            payload.get("userDisplayName")
-            if isinstance(payload.get("userDisplayName"), str)
-            else None
-        ),
+        name=_to_optional_str(payload.get("userDisplayName")),
         rating=_to_float(payload.get("averageScore")),
         identity_verified=_to_bool(payload.get("isIdentityVerified")),
         rule_checked=_to_bool(payload.get("isEmployerRuleCheckSucceeded")),
         jobs_posted_count=_to_int(payload.get("jobOfferAchievementCount")),
         project_finished_rate=_to_int(payload.get("projectFinishedRate")),
+        profile_description=_to_optional_str(payload.get("companyProfileDescription")),
     )
 
     if _is_client_empty(client):

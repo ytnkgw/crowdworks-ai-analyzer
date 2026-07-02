@@ -35,3 +35,7 @@ def test_parse_job_detail_extracts_category_and_sub_category_from_breadcrumb() -
     assert parsed.client.rule_checked is False
     assert parsed.client.jobs_posted_count == 32
     assert parsed.client.project_finished_rate == 75
+    assert parsed.client.profile_description is not None
+    assert parsed.client.profile_description.startswith(
+        "弊社沖縄発のSES企業でございます。"
+    )

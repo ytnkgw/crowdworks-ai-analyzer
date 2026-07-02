@@ -39,3 +39,5 @@ def test_parse_job_detail_extracts_category_and_sub_category_from_breadcrumb() -
     assert parsed.client.profile_description.startswith(
         "弊社沖縄発のSES企業でございます。"
     )
+    assert parsed.delivery_deadline is None
+    assert parsed.is_remote is True

@@ -54,6 +54,62 @@ def _to_optional_str(value: object) -> str | None:
     return normalized or None
 
 
+def _to_optional_text(value: object) -> str | None:
+    text = _to_optional_str(value)
+    if text in (None, "-"):
+        return None
+    return text
+
+
+def _is_job_posting(payload: dict) -> bool:
+    payload_type = payload.get("@type")
+    if isinstance(payload_type, str):
+        return payload_type == "JobPosting"
+    if isinstance(payload_type, list):
+        return "JobPosting" in payload_type
+    return False
+
+
+def _extract_is_remote_from_structured_data(soup: BeautifulSoup) -> bool | None:
+    scripts = soup.select('script[type="application/ld+json"]')
+    for script in scripts:
+        raw_json = script.string or script.get_text()
+        if not raw_json:
+            continue
+
+        try:
+            payload = json.loads(raw_json)
+        except json.JSONDecodeError:
+            continue
+
+        candidates: list[dict] = []
+        if isinstance(payload, dict):
+            candidates = [payload]
+        elif isinstance(payload, list):
+            candidates = [item for item in payload if isinstance(item, dict)]
+
+        for item in candidates:
+            if not _is_job_posting(item):
+                continue
+
+            job_location_type = item.get("jobLocationType")
+            if isinstance(job_location_type, str):
+                return job_location_type == "TELECOMMUTE"
+
+    return None
+
+
+def _infer_is_remote_from_description(description: str | None) -> bool | None:
+    if not description:
+        return None
+
+    keywords = ("在宅", "リモート", "オンライン", "ご自宅")
+    if any(keyword in description for keyword in keywords):
+        return True
+
+    return None
+
+
 def _is_client_empty(client: Client) -> bool:
     return (
         client.id is None
@@ -153,6 +209,7 @@ def parse_jobs(html: str) -> list[Job]:
 
 def parse_job_detail(job: Job, html: str) -> Job:
     soup = BeautifulSoup(html, "html.parser")
+    job.is_remote = _extract_is_remote_from_structured_data(soup)
 
     # 0. クライアント情報
     job.client = _extract_client_from_data_attr(soup)
@@ -192,14 +249,10 @@ def parse_job_detail(job: Job, html: str) -> Job:
         # <br>タグを実際の改行に変換しつつテキストを綺麗にする
         job.description = detail_td.get_text(separator="\n").strip()
 
-    # 4. 報酬 / 5. 応募期限 / 6. 募集開始日（掲載日）
+    # 4. 報酬 / 5. 応募期限 / 6. 募集開始日（掲載日）/ 7. 納品希望日
     # これらは「仕事の概要」テーブル（class="cw-table summary"）から抽出するのが確実です
-    summary = {}
-    for row in soup.find(
-        "table", class_="summary"
-    ).find_all(  # pyright: ignore[reportOptionalMemberAccess]
-        "tr"
-    ):
+    summary: dict[str, str] = {}
+    for row in soup.select("section.job_offer_summary table.cw-table.summary tr"):
         th = row.find("th")
         td = row.find("td")
         if th and td:
@@ -217,8 +270,12 @@ def parse_job_detail(job: Job, html: str) -> Job:
                 break
     job.published_at = summary.get("掲載日")
     job.application_deadline = summary.get("応募期限")
+    job.delivery_deadline = _to_optional_text(summary.get("納品希望日"))
 
-    # 7. 応募状況 (応募した人、契約した人、募集人数、気になる！リスト)
+    if job.is_remote is None:
+        job.is_remote = _infer_is_remote_from_description(job.description)
+
+    # 8. 応募状況 (応募した人、契約した人、募集人数、気になる！リスト)
     # ラベル(th)を基準に抽出し、HTML構造変更に比較的強い実装にする
     status: dict[str, str] = {}
     for row in soup.select(

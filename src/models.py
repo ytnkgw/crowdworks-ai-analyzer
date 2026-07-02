@@ -26,6 +26,8 @@ class Job:
 
     application_deadline: str | None = None
     published_at: str | None = None
+    delivery_deadline: str | None = None
+    is_remote: bool | None = None
 
     application_count: int | None = None
     contract_count: int | None = None

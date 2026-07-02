@@ -46,5 +46,8 @@ debug/*
 # Output
 # =====================
 
+output/*.json
+output/*.md
 output/raw/*
+!output/.gitkeep
 !output/raw/.gitkeep

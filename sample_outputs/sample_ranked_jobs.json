@@ -1,0 +1,86 @@
+[
+    {
+        "rank": 1,
+        "job": {
+            "id": 12345678,
+            "title": "社内FAQ検索を改善するAIチャットボット導入サポート",
+            "url": "https://crowdworks.jp/public/jobs/12345678"
+        },
+        "analysis": {
+            "reward_score": 4,
+            "competition_score": 4,
+            "ai_score": 5,
+            "continuity_score": 4,
+            "quality_score": 5,
+            "total_score": 92,
+            "recommendation_reasons": [
+                "AI活用の具体的な導入支援が主題で、ポートフォリオとの親和性が高い",
+                "要件整理から運用提案まで含まれており、上流工程の実績を示しやすい"
+            ],
+            "concerns": [
+                "社内ドキュメント整備の前提条件を初期段階で確認する必要がある"
+            ],
+            "application_strategy": [
+                "FAQ整理や検索改善の進め方を簡潔な手順で提案する",
+                "データ整形と運用定着まで支援できる点を明確に伝える"
+            ],
+            "overall_comment": "AI活用と業務改善の両面を訴求しやすく、優先的に検討しやすいサンプル案件です。"
+        }
+    },
+    {
+        "rank": 2,
+        "job": {
+            "id": 12345680,
+            "title": "競合サービス調査とWeb改善提案レポート作成サンプル",
+            "url": "https://crowdworks.jp/public/jobs/12345680"
+        },
+        "analysis": {
+            "reward_score": 4,
+            "competition_score": 4,
+            "ai_score": 3,
+            "continuity_score": 3,
+            "quality_score": 5,
+            "total_score": 84,
+            "recommendation_reasons": [
+                "調査結果を構造化して改善提案に落とし込む力をアピールしやすい",
+                "Web改善とリサーチの両方を扱うため、提案の幅を見せやすい"
+            ],
+            "concerns": [
+                "期待されるレポート粒度を事前に擦り合わせないと認識差が出やすい"
+            ],
+            "application_strategy": [
+                "比較観点とアウトプット見本を先に提示して期待値を合わせる",
+                "調査だけでなく改善優先順位まで示せる点を打ち出す"
+            ],
+            "overall_comment": "改善提案型の案件として見せやすく、分析力や整理力を伝えるのに向いたサンプルです。"
+        }
+    },
+    {
+        "rank": 3,
+        "job": {
+            "id": 12345679,
+            "title": "EC商品データ入力とカテゴリ整理の効率化サンプル案件",
+            "url": "https://crowdworks.jp/public/jobs/12345679"
+        },
+        "analysis": {
+            "reward_score": 3,
+            "competition_score": 3,
+            "ai_score": 4,
+            "continuity_score": 3,
+            "quality_score": 4,
+            "total_score": 81,
+            "recommendation_reasons": [
+                "定型業務の整理とテンプレート化により、改善提案の実績を示しやすい",
+                "データ入力だけでなく、運用ルール設計にも踏み込める余地がある"
+            ],
+            "concerns": [
+                "単価は中程度のため、工数見積もりを明確にしないと収益性が下がる可能性がある"
+            ],
+            "application_strategy": [
+                "入力品質を安定させるチェック方法を具体的に提示する",
+                "カテゴリ設計と再利用可能なテンプレート作成を提案に含める"
+            ],
+            "overall_comment": "派手さはないものの、業務効率化の考え方を示しやすい実務寄りのサンプル案件です。"
+        }
+    }
+]

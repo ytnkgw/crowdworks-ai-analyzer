@@ -252,7 +252,7 @@ def test_main_shows_help_and_skips_work_when_no_options(
     assert "python3 src/main.py" in help_output.getvalue()
     assert "--rank" in help_output.getvalue()
     assert "output/ranked_jobs.json" in help_output.getvalue()
-    assert "default: 5" in help_output.getvalue()
+    assert "default: 10000" in help_output.getvalue()
     assert not (output_dir / "ranked_jobs.json").exists()
     assert not (output_dir / "ranked_jobs_report.md").exists()
 
@@ -324,6 +324,106 @@ def test_main_collect_jobs_passes_limit_to_collector(
     assert len(raw_files) == 1
     assert "Saved raw jobs:" in output.getvalue()
     assert "Saved pipeline jobs:" in output.getvalue()
+
+
+def test_main_collect_jobs_excludes_expired_deadline_jobs(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    output_dir = tmp_path / "output"
+    output_dir.mkdir()
+    monkeypatch.setattr(config, "OUTPUT_DIR", str(output_dir))
+
+    def fake_collect_jobs_from_url(
+        url: str, limit: int | None = None
+    ) -> list[job_collector.Job]:
+        return [
+            job_collector.Job(
+                id=1,
+                title="期限切れ案件",
+                url="https://example.com/jobs/1",
+                application_deadline="2026年07月01日",
+            ),
+            job_collector.Job(
+                id=2,
+                title="募集中案件",
+                url="https://example.com/jobs/2",
+                application_deadline="2026年07月02日",
+            ),
+        ]
+
+    monkeypatch.setattr(main, "collect_jobs_from_url", fake_collect_jobs_from_url)
+    monkeypatch.setattr(
+        main,
+        "should_exclude_by_deadline",
+        lambda deadline: deadline == "2026年07月01日",
+    )
+
+    output = io.StringIO()
+    with redirect_stdout(output):
+        exit_code = main.main(
+            [
+                "--collect-jobs",
+                "--url",
+                "https://example.com/public/jobs/group/development",
+            ]
+        )
+
+    assert exit_code == 0
+    jobs_payload = json.loads((output_dir / "jobs.json").read_text(encoding="utf-8"))
+    assert len(jobs_payload) == 1
+    assert jobs_payload[0]["title"] == "募集中案件"
+    assert "Skipped expired jobs: 1" in output.getvalue()
+
+
+def test_main_rank_excludes_expired_deadline_jobs(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    output_dir = tmp_path / "output"
+    output_dir.mkdir()
+    monkeypatch.setattr(config, "OUTPUT_DIR", str(output_dir))
+
+    analysis_results_path = output_dir / "analysis_results.json"
+    analysis_results_path.write_text(
+        json.dumps(
+            [
+                {
+                    "job": {
+                        "id": 1,
+                        "title": "期限切れ案件",
+                        "application_deadline": "2026年07月01日",
+                    },
+                    "analysis": {"total_score": 90},
+                },
+                {
+                    "job": {
+                        "id": 2,
+                        "title": "募集中案件",
+                        "application_deadline": "2026年07月02日",
+                    },
+                    "analysis": {"total_score": 80},
+                },
+            ]
+        ),
+        encoding="utf-8",
+    )
+
+    monkeypatch.setattr(
+        main,
+        "should_exclude_by_deadline",
+        lambda deadline: deadline == "2026年07月01日",
+    )
+
+    output = io.StringIO()
+    with redirect_stdout(output):
+        exit_code = main.main(["--rank"])
+
+    assert exit_code == 0
+    ranked_items = json.loads(
+        (output_dir / "ranked_jobs.json").read_text(encoding="utf-8")
+    )
+    assert len(ranked_items) == 1
+    assert ranked_items[0]["job"]["title"] == "募集中案件"
+    assert "Skipped expired jobs: 1" in output.getvalue()
 
 
 def test_main_runs_rank_display_and_report_flow(

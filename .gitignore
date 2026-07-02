@@ -41,3 +41,10 @@ dist/
 
 debug/*
 !debug/.gitkeep
+
+# =====================
+# Output
+# =====================
+
+output/raw/*
+!output/raw/.gitkeep

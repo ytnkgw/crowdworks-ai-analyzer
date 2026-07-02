@@ -59,8 +59,8 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument(
         "--limit",
         type=int,
-        default=50,
-        help="表示・出力する上位件数を指定する（default: 50）",
+        default=10000,
+        help="表示・出力する上位件数を指定する（default: 10000）",
     )
 
     return parser

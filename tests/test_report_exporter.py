@@ -33,7 +33,7 @@ def test_format_ranked_job_as_markdown_includes_expected_sections() -> None:
 
     text = format_ranked_job_as_markdown(item)
 
-    assert "## #1 91点" in text
+    assert "## #1 : 91点" in text
     assert "### 案件情報" in text
     assert "- Title: 高評価案件" in text
     assert "| 報酬 | 4 |" in text
@@ -71,4 +71,4 @@ def test_export_ranked_jobs_report_writes_markdown_file(tmp_path: Path) -> None:
 
     written = output_path.read_text(encoding="utf-8")
     assert "# CrowdWorks Job Ranking Report" in written
-    assert "## #1 91点" in written
+    assert "## #1 : 91点" in written

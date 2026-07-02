@@ -3,6 +3,7 @@ import json
 import config
 from pathlib import Path
 from exporter import (
+    save_raw_jobs,
     build_job_analysis_item,
     export_job_analysis_results,
     export_jobs_to_json,
@@ -90,9 +91,11 @@ def main(argv: list[str] | None = None) -> int:
     ### Pipline: 案件情報の収集と JSON ファイルへの保存
     if args.collect_jobs:
         jobs = collect_jobs_from_url(args.url, limit=args.limit)
+        raw_output_path = save_raw_jobs(jobs, args.url, output_dir=output_dir)
         export_jobs_to_json(jobs, output_dir / "jobs.json")
+        print(f"Saved raw jobs: {raw_output_path}")
+        print(f"Saved pipeline jobs: {output_dir / 'jobs.json'}")
         print(f"Collected {len(jobs)} jobs.")
-        print("Saved to output/jobs.json")
         return 0
 
     # ### Pipline: 案件情報の JSON ファイルからの読み込み

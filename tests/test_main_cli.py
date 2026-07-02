@@ -294,17 +294,36 @@ def test_main_collect_jobs_passes_limit_to_collector(
     ) -> list[job_collector.Job]:
         captured["url"] = url
         captured["limit"] = limit
-        return []
+        return [
+            job_collector.Job(
+                id=1,
+                title="案件A",
+                url="https://example.com/jobs/1",
+            )
+        ]
 
     monkeypatch.setattr(main, "collect_jobs_from_url", fake_collect_jobs_from_url)
 
-    exit_code = main.main(
-        ["--collect-jobs", "--url", "https://example.com/jobs", "--limit", "2"]
-    )
+    output = io.StringIO()
+    with redirect_stdout(output):
+        exit_code = main.main(
+            [
+                "--collect-jobs",
+                "--url",
+                "https://example.com/public/jobs/group/development?page=2",
+                "--limit",
+                "2",
+            ]
+        )
 
     assert exit_code == 0
-    assert captured["url"] == "https://example.com/jobs"
+    assert captured["url"] == "https://example.com/public/jobs/group/development?page=2"
     assert captured["limit"] == 2
+    assert (output_dir / "jobs.json").exists()
+    raw_files = list((output_dir / "raw").glob("jobs_*_development_02.json"))
+    assert len(raw_files) == 1
+    assert "Saved raw jobs:" in output.getvalue()
+    assert "Saved pipeline jobs:" in output.getvalue()
 
 
 def test_main_runs_rank_display_and_report_flow(

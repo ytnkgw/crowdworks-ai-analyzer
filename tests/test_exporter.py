@@ -5,9 +5,11 @@ from pathlib import Path
 sys.path.append(str(Path(__file__).resolve().parents[1] / "src"))
 
 from exporter import (
+    build_raw_jobs_filename,
     build_job_analysis_item,
     export_job_analysis_results,
     export_jobs_to_json,
+    save_raw_jobs,
 )
 from models import AnalysisResult, Client, Job
 
@@ -132,3 +134,35 @@ def test_export_jobs_to_json_includes_detail_fields(tmp_path: Path) -> None:
         written[0]["client"]["profile_description"]
         == "弊社沖縄発のSES企業でございます。"
     )
+
+
+def test_build_raw_jobs_filename_uses_category_date_and_page() -> None:
+    filename = build_raw_jobs_filename(
+        "https://crowdworks.jp/public/jobs/group/development?page=2",
+        date="20260702",
+    )
+
+    assert filename == "jobs_20260702_development_02.json"
+
+
+def test_save_raw_jobs_writes_page_scoped_json(tmp_path: Path) -> None:
+    jobs = [
+        Job(
+            id=1,
+            title="案件タイトル",
+            url="https://crowdworks.jp/public/jobs/1",
+        )
+    ]
+
+    saved_path = save_raw_jobs(
+        jobs,
+        "https://crowdworks.jp/public/jobs/group/ai_bpo?page=2",
+        output_dir=tmp_path / "output",
+        date="20260702",
+    )
+
+    assert saved_path == tmp_path / "output" / "raw" / "jobs_20260702_ai_bpo_02.json"
+
+    written = json.loads(saved_path.read_text(encoding="utf-8"))
+    assert written[0]["id"] == 1
+    assert written[0]["title"] == "案件タイトル"

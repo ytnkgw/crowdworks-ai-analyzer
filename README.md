@@ -194,7 +194,7 @@ output/ranked_jobs.json
 output/ranked_jobs_report.md
 ```
 
-公開用サンプルとして、匿名化済みのサンプル出力を以下に配置する予定です。
+公開用サンプルとして、匿名化済みのサンプル出力を以下に配置しています。
 
 ```text
 sample_outputs/sample_jobs.json
@@ -287,15 +287,19 @@ sample_outputs/sample_report.md
 
 ### 完了済み
 
-* v0.1.0: Data Collection Engine
-* v0.2.0: AI Analysis MVP
 * v0.3.0: Usable Ranking Output
+* v0.2.0: AI Analysis MVP
+* v0.1.0: Data Collection Engine
+
+### v0.4.0で対応済み
+
+* READMEのポートフォリオ向け整理
+* サンプル出力の匿名化
+* GitHub公開前チェック項目の整理
 
 ### 整理中
 
 * v0.4.0: URL-based Job Collection Export
-* READMEのポートフォリオ向け整理
-* サンプル出力の匿名化
 * GitHub公開前チェック
 * CHANGELOG / Decision Log の整備
 
@@ -303,7 +307,6 @@ sample_outputs/sample_report.md
 
 ## 今後の改善予定
 
-* サンプル出力ファイルの整備
 * 応募期限切れ案件の自動除外
 * 案件カテゴリ別の分析精度改善
 * CLIオプションの整理

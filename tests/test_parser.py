@@ -27,3 +27,11 @@ def test_parse_job_detail_extracts_category_and_sub_category_from_breadcrumb() -
     assert parsed.contract_count == 0
     assert parsed.recruitment_count == 3
     assert parsed.favorite_count == 42
+    assert parsed.client is not None
+    assert parsed.client.id == 6576565
+    assert parsed.client.name == "デジハナ採用担当"
+    assert parsed.client.rating == 5.0
+    assert parsed.client.identity_verified is False
+    assert parsed.client.rule_checked is False
+    assert parsed.client.jobs_posted_count == 32
+    assert parsed.client.project_finished_rate == 75

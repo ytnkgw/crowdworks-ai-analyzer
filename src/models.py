@@ -2,6 +2,17 @@ from dataclasses import dataclass, field
 
 
 @dataclass
+class Client:
+    id: int | None = None
+    name: str | None = None
+    rating: float | None = None
+    identity_verified: bool | None = None
+    rule_checked: bool | None = None
+    jobs_posted_count: int | None = None
+    project_finished_rate: int | None = None
+
+
+@dataclass
 class Job:
     id: int
     title: str
@@ -19,6 +30,8 @@ class Job:
     contract_count: int | None = None
     recruitment_count: int | None = None
     favorite_count: int | None = None
+
+    client: Client | None = None
 
 
 @dataclass

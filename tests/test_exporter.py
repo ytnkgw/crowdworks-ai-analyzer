@@ -9,7 +9,7 @@ from exporter import (
     export_job_analysis_results,
     export_jobs_to_json,
 )
-from models import AnalysisResult, Job
+from models import AnalysisResult, Client, Job
 
 
 def test_build_job_analysis_item_creates_expected_dict() -> None:
@@ -86,6 +86,15 @@ def test_export_jobs_to_json_includes_detail_fields(tmp_path: Path) -> None:
             contract_count=0,
             recruitment_count=1,
             favorite_count=42,
+            client=Client(
+                id=6576565,
+                name="デジハナ採用担当",
+                rating=5.0,
+                identity_verified=False,
+                rule_checked=False,
+                jobs_posted_count=32,
+                project_finished_rate=75,
+            ),
         )
     ]
 
@@ -107,3 +116,10 @@ def test_export_jobs_to_json_includes_detail_fields(tmp_path: Path) -> None:
     assert written[0]["contract_count"] == 0
     assert written[0]["recruitment_count"] == 1
     assert written[0]["favorite_count"] == 42
+    assert written[0]["client"]["id"] == 6576565
+    assert written[0]["client"]["name"] == "デジハナ採用担当"
+    assert written[0]["client"]["rating"] == 5.0
+    assert written[0]["client"]["identity_verified"] is False
+    assert written[0]["client"]["rule_checked"] is False
+    assert written[0]["client"]["jobs_posted_count"] == 32
+    assert written[0]["client"]["project_finished_rate"] == 75

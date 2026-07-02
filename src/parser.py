@@ -1,10 +1,110 @@
 import json
+import html as html_lib
 from pathlib import Path
 from typing import List
 from bs4 import BeautifulSoup
 import config
-from models import Job
+from models import Client, Job
 import utils
+
+
+def _to_int(value: object) -> int | None:
+    if isinstance(value, bool):
+        return None
+    if isinstance(value, int):
+        return value
+    if isinstance(value, str):
+        return utils.extract_number(value)
+    return None
+
+
+def _to_float(value: object) -> float | None:
+    if isinstance(value, bool):
+        return None
+    if isinstance(value, (int, float)):
+        return float(value)
+    if isinstance(value, str):
+        normalized = value.strip().replace(",", "")
+        if not normalized or normalized == "-":
+            return None
+        try:
+            return float(normalized)
+        except ValueError:
+            return None
+    return None
+
+
+def _to_bool(value: object) -> bool | None:
+    if isinstance(value, bool):
+        return value
+    if isinstance(value, str):
+        normalized = value.strip().lower()
+        if normalized == "true":
+            return True
+        if normalized == "false":
+            return False
+    return None
+
+
+def _is_client_empty(client: Client) -> bool:
+    return (
+        client.id is None
+        and client.name is None
+        and client.rating is None
+        and client.identity_verified is None
+        and client.rule_checked is None
+        and client.jobs_posted_count is None
+        and client.project_finished_rate is None
+    )
+
+
+def _extract_client_from_header(soup: BeautifulSoup) -> Client | None:
+    name_tag = soup.select_one(".client_name a") or soup.select_one(".client_name")
+    rating_tag = soup.select_one(".client_rating .star_container")
+
+    name = name_tag.get_text(strip=True) if name_tag else None
+    rating = _to_float(rating_tag.get_text(strip=True)) if rating_tag else None
+
+    client = Client(name=name or None, rating=rating)
+    return None if _is_client_empty(client) else client
+
+
+def _extract_client_from_data_attr(soup: BeautifulSoup) -> Client | None:
+    container = soup.select_one("#client_detail_information_container")
+    if not container:
+        return _extract_client_from_header(soup)
+
+    raw_data = container.get("data")
+    if not isinstance(raw_data, str) or not raw_data.strip():
+        return _extract_client_from_header(soup)
+
+    decoded = html_lib.unescape(raw_data)
+    try:
+        payload = json.loads(decoded)
+    except json.JSONDecodeError:
+        return _extract_client_from_header(soup)
+
+    if not isinstance(payload, dict):
+        return _extract_client_from_header(soup)
+
+    client = Client(
+        id=_to_int(payload.get("userId")),
+        name=(
+            payload.get("userDisplayName")
+            if isinstance(payload.get("userDisplayName"), str)
+            else None
+        ),
+        rating=_to_float(payload.get("averageScore")),
+        identity_verified=_to_bool(payload.get("isIdentityVerified")),
+        rule_checked=_to_bool(payload.get("isEmployerRuleCheckSucceeded")),
+        jobs_posted_count=_to_int(payload.get("jobOfferAchievementCount")),
+        project_finished_rate=_to_int(payload.get("projectFinishedRate")),
+    )
+
+    if _is_client_empty(client):
+        return _extract_client_from_header(soup)
+
+    return client
 
 
 def parse_jobs(html: str) -> list[Job]:
@@ -48,7 +148,10 @@ def parse_jobs(html: str) -> list[Job]:
 def parse_job_detail(job: Job, html: str) -> Job:
     soup = BeautifulSoup(html, "html.parser")
 
-    # 0. カテゴリ / サブカテゴリ (パンくず)
+    # 0. クライアント情報
+    job.client = _extract_client_from_data_attr(soup)
+
+    # 1. カテゴリ / サブカテゴリ (パンくず)
     # 末尾の「の仕事・求人」を取り除いて保存する
     job.category = None
     job.sub_category = None
@@ -67,7 +170,7 @@ def parse_job_detail(job: Job, html: str) -> Job:
         elif "/public/jobs/category/" in href and job.sub_category is None:
             job.sub_category = value
 
-    # 1. 案件タイトル
+    # 2. 案件タイトル
     # h1タグのテキストから後ろの余分なサブタイトル（カテゴリ情報等）を削ぎ落として取得
     title_tag = soup.find("h1")
     if title_tag:
@@ -76,14 +179,14 @@ def parse_job_detail(job: Job, html: str) -> Job:
         if title:
             job.title = title.strip()
 
-    # 2. 仕事の詳細 (全文)
+    # 3. 仕事の詳細 (全文)
     # <td class="confirm_outside_link"> 内に改行付きの全文が格納されています
     detail_td = soup.find("td", class_="confirm_outside_link")
     if detail_td:
         # <br>タグを実際の改行に変換しつつテキストを綺麗にする
         job.description = detail_td.get_text(separator="\n").strip()
 
-    # 3. 報酬 / 4. 応募期限 / 5. 募集開始日（掲載日）
+    # 4. 報酬 / 5. 応募期限 / 6. 募集開始日（掲載日）
     # これらは「仕事の概要」テーブル（class="cw-table summary"）から抽出するのが確実です
     summary = {}
     for row in soup.find(
@@ -109,7 +212,7 @@ def parse_job_detail(job: Job, html: str) -> Job:
     job.published_at = summary.get("掲載日")
     job.application_deadline = summary.get("応募期限")
 
-    # 6. 応募状況 (応募した人、契約した人、募集人数、気になる！リスト)
+    # 7. 応募状況 (応募した人、契約した人、募集人数、気になる！リスト)
     # ラベル(th)を基準に抽出し、HTML構造変更に比較的強い実装にする
     status: dict[str, str] = {}
     for row in soup.select(

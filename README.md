@@ -94,8 +94,16 @@ source .venv/bin/activate
 
 ### 3. 依存パッケージをインストール
 
+実行のみ行う場合は、以下を実行してください。
+
 ```bash
 python3 -m pip install -r requirements.txt
+```
+
+開発・テストも行う場合は、以下を実行してください。
+
+```bash
+python3 -m pip install -r requirements-dev.txt
 ```
 
 ### 4. OpenAI APIキーを設定

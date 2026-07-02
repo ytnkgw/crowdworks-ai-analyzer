@@ -1,0 +1,83 @@
+[
+    {
+        "id": 12345678,
+        "title": "社内FAQ検索を改善するAIチャットボット導入サポート",
+        "url": "https://crowdworks.jp/public/jobs/12345678",
+        "category": "AI・機械学習",
+        "sub_category": "業務自動化",
+        "description": "社内向けFAQを検索しやすくするため、既存ドキュメントを整理し、AIチャットボット導入の初期設定を支援する想定のサンプル案件です。要件整理、データ整形、運用フロー提案までを含みます。",
+        "reward": "固定報酬制 : 120,000円",
+        "application_deadline": "2026年07月20日",
+        "published_at": "2026年07月02日",
+        "delivery_deadline": "2026年08月05日",
+        "is_remote": true,
+        "application_count": 8,
+        "contract_count": 1,
+        "recruitment_count": 1,
+        "favorite_count": 24,
+        "client": {
+            "id": 501001,
+            "name": "サンプルDXラボ",
+            "rating": 4.8,
+            "identity_verified": true,
+            "rule_checked": true,
+            "jobs_posted_count": 18,
+            "project_finished_rate": 92,
+            "profile_description": "業務改善とナレッジ整備をテーマにした架空のサンプル企業です。"
+        }
+    },
+    {
+        "id": 12345679,
+        "title": "EC商品データ入力とカテゴリ整理の効率化サンプル案件",
+        "url": "https://crowdworks.jp/public/jobs/12345679",
+        "category": "事務・データ入力・カスタマーサポート",
+        "sub_category": "データ入力",
+        "description": "ECサイトの商品情報を整理し、入力ルールの統一とテンプレート化を進める想定のサンプル案件です。表記ゆれの整理、カテゴリ再設計、簡易マニュアル作成を含みます。",
+        "reward": "固定報酬制 : 45,000円",
+        "application_deadline": "2026年07月18日",
+        "published_at": "2026年07月01日",
+        "delivery_deadline": "2026年07月25日",
+        "is_remote": true,
+        "application_count": 15,
+        "contract_count": 0,
+        "recruitment_count": 2,
+        "favorite_count": 17,
+        "client": {
+            "id": 501002,
+            "name": "サンプルECスタジオ",
+            "rating": 4.5,
+            "identity_verified": true,
+            "rule_checked": true,
+            "jobs_posted_count": 42,
+            "project_finished_rate": 88,
+            "profile_description": "EC運営支援を題材にした架空のサンプル事業者です。"
+        }
+    },
+    {
+        "id": 12345680,
+        "title": "競合サービス調査とWeb改善提案レポート作成サンプル",
+        "url": "https://crowdworks.jp/public/jobs/12345680",
+        "category": "ビジネス・マーケティング・企画",
+        "sub_category": "市場調査・リサーチ",
+        "description": "競合サイトの導線、訴求、フォーム体験を比較し、改善提案をレポート化する想定のサンプル案件です。簡易ヒューリスティック評価と打ち手整理を含みます。",
+        "reward": "固定報酬制 : 80,000円",
+        "application_deadline": "2026年07月22日",
+        "published_at": "2026年07月02日",
+        "delivery_deadline": "2026年07月30日",
+        "is_remote": true,
+        "application_count": 6,
+        "contract_count": 0,
+        "recruitment_count": 1,
+        "favorite_count": 21,
+        "client": {
+            "id": 501003,
+            "name": "サンプルグロース企画室",
+            "rating": 4.9,
+            "identity_verified": true,
+            "rule_checked": true,
+            "jobs_posted_count": 11,
+            "project_finished_rate": 95,
+            "profile_description": "Web改善や調査案件を想定した架空のサンプル組織です。"
+        }
+    }
+]

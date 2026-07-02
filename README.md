@@ -188,9 +188,10 @@ python3 src/main.py --rank --display-ranking --export-report --limit 5
 
 ```text
 output/jobs.json
+output/raw/jobs_YYYYMMDD_{category}_{page:02d}.json
 output/analysis_results.json
 output/ranked_jobs.json
-output/report.md
+output/ranked_jobs_report.md
 ```
 
 公開用サンプルとして、匿名化済みのサンプル出力を以下に配置する予定です。

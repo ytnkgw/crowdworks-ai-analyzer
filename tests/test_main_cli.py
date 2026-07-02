@@ -12,6 +12,7 @@ sys.path.append(str(Path(__file__).resolve().parents[1] / "src"))
 import config
 import main
 import job_collector
+from models import AnalysisResult
 
 
 class _CollectedArgs(TypedDict):
@@ -22,9 +23,17 @@ class _CollectedArgs(TypedDict):
 def test_build_parser_defines_expected_flags() -> None:
     parser = main.build_parser()
     args = parser.parse_args(
-        ["--rank", "--display-ranking", "--export-report", "--limit", "3"]
+        [
+            "--analyze",
+            "--rank",
+            "--display-ranking",
+            "--export-report",
+            "--limit",
+            "3",
+        ]
     )
 
+    assert args.analyze is True
     assert args.rank is True
     assert args.display_ranking is True
     assert args.export_report is True
@@ -250,11 +259,141 @@ def test_main_shows_help_and_skips_work_when_no_options(
 
     assert exit_code == 0
     assert "python3 src/main.py" in help_output.getvalue()
+    assert "--analyze" in help_output.getvalue()
     assert "--rank" in help_output.getvalue()
     assert "output/ranked_jobs.json" in help_output.getvalue()
     assert "default: 10000" in help_output.getvalue()
     assert not (output_dir / "ranked_jobs.json").exists()
     assert not (output_dir / "ranked_jobs_report.md").exists()
+
+
+def test_main_analyze_writes_analysis_results_with_limit(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    output_dir = tmp_path / "output"
+    output_dir.mkdir()
+    monkeypatch.setattr(config, "OUTPUT_DIR", str(output_dir))
+
+    jobs_path = output_dir / "jobs.json"
+    jobs_path.write_text(
+        json.dumps(
+            [
+                {
+                    "id": 1,
+                    "title": "案件A",
+                    "url": "https://example.com/jobs/1",
+                },
+                {
+                    "id": 2,
+                    "title": "案件B",
+                    "url": "https://example.com/jobs/2",
+                },
+            ]
+        ),
+        encoding="utf-8",
+    )
+
+    monkeypatch.setattr(main, "should_exclude_by_deadline", lambda _: False)
+
+    calls: list[int] = []
+
+    def fake_analyze_job(job: job_collector.Job) -> AnalysisResult:
+        calls.append(job.id)
+        return AnalysisResult.from_dict(
+            {
+                "reward_score": 3,
+                "competition_score": 3,
+                "ai_score": 3,
+                "continuity_score": 3,
+                "quality_score": 3,
+                "total_score": 75,
+                "recommendation_reasons": [],
+                "concerns": [],
+                "application_strategy": [],
+                "overall_comment": "ok",
+            }
+        )
+
+    monkeypatch.setattr(main, "analyze_job", fake_analyze_job)
+
+    output = io.StringIO()
+    with redirect_stdout(output):
+        exit_code = main.main(["--analyze", "--limit", "1"])
+
+    assert exit_code == 0
+    assert calls == [1]
+    assert (output_dir / "analysis_results.json").exists()
+
+    payload = json.loads((output_dir / "analysis_results.json").read_text("utf-8"))
+    assert len(payload) == 1
+    assert payload[0]["job"]["id"] == 1
+    assert "Saved analysis results:" in output.getvalue()
+    assert "Analyzed 1 jobs." in output.getvalue()
+
+
+def test_main_analyze_excludes_expired_deadline_jobs_and_prints_skipped(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    output_dir = tmp_path / "output"
+    output_dir.mkdir()
+    monkeypatch.setattr(config, "OUTPUT_DIR", str(output_dir))
+
+    jobs_path = output_dir / "jobs.json"
+    jobs_path.write_text(
+        json.dumps(
+            [
+                {
+                    "id": 1,
+                    "title": "期限切れ案件",
+                    "url": "https://example.com/jobs/1",
+                    "application_deadline": "2026年07月01日",
+                },
+                {
+                    "id": 2,
+                    "title": "募集中案件",
+                    "url": "https://example.com/jobs/2",
+                    "application_deadline": "2026年07月02日",
+                },
+            ]
+        ),
+        encoding="utf-8",
+    )
+
+    monkeypatch.setattr(
+        main,
+        "should_exclude_by_deadline",
+        lambda deadline: deadline == "2026年07月01日",
+    )
+
+    calls: list[int] = []
+
+    def fake_analyze_job(job: job_collector.Job) -> AnalysisResult:
+        calls.append(job.id)
+        return AnalysisResult.from_dict(
+            {
+                "reward_score": 3,
+                "competition_score": 3,
+                "ai_score": 3,
+                "continuity_score": 3,
+                "quality_score": 3,
+                "total_score": 75,
+                "recommendation_reasons": [],
+                "concerns": [],
+                "application_strategy": [],
+                "overall_comment": "ok",
+            }
+        )
+
+    monkeypatch.setattr(main, "analyze_job", fake_analyze_job)
+
+    output = io.StringIO()
+    with redirect_stdout(output):
+        exit_code = main.main(["--analyze"])
+
+    assert exit_code == 0
+    assert calls == [2]
+    assert "Skipped expired jobs: 1" in output.getvalue()
+    assert "Analyzed 1 jobs." in output.getvalue()
 
 
 def test_build_parser_supports_collect_jobs_and_url() -> None:

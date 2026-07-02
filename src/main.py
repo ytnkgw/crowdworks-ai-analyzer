@@ -40,6 +40,12 @@ def build_parser() -> argparse.ArgumentParser:
     )
 
     parser.add_argument(
+        "--analyze",
+        action="store_true",
+        help="output/jobs.json を読み込んで AI 分析し output/analysis_results.json を生成する",
+    )
+
+    parser.add_argument(
         "--rank",
         action="store_true",
         help="分析結果をランキングして output/ranked_jobs.json を生成する",
@@ -145,7 +151,13 @@ def main(argv: list[str] | None = None) -> int:
         parser.error("--collect-jobs を使用する場合は --url を指定してください。")
 
     if not any(
-        [args.rank, args.display_ranking, args.export_report, args.collect_jobs]
+        [
+            args.collect_jobs,
+            args.analyze,
+            args.rank,
+            args.display_ranking,
+            args.export_report,
+        ]
     ):
         parser.print_help()
         return 0
@@ -168,17 +180,24 @@ def main(argv: list[str] | None = None) -> int:
         print(f"Collected {len(filtered_jobs)} jobs.")
         return 0
 
-    # ### Pipline: 案件情報の JSON ファイルからの読み込み
-    # jobs = load_jobs_from_json(output_dir / "jobs.json")
+    ### Pipline: 案件情報の JSON ファイルからの読み込、分析、保存
+    if args.analyze:
+        jobs = load_jobs_from_json(output_dir / "jobs.json")
+        filtered_jobs, skipped_count = _filter_jobs_by_deadline(jobs)
+        target_jobs = filtered_jobs[: args.limit]
 
-    # ### Pipline: 案件情報の分析
-    # export_results = []
-    # for job in jobs[:10]:
-    #     result = analyze_job(job)
-    #     export_results.append(build_job_analysis_item(job, result))
+        export_results = []
+        for job in target_jobs:
+            result = analyze_job(job)
+            export_results.append(build_job_analysis_item(job, result))
 
-    # ### Pipline: 案件情報の分析結果の JSON ファイルへの保存
-    # export_job_analysis_results(export_results, output_dir / "analysis_results.json")
+        analysis_results_path = output_dir / "analysis_results.json"
+        export_job_analysis_results(export_results, analysis_results_path)
+
+        if skipped_count > 0:
+            print(f"Skipped expired jobs: {skipped_count}")
+        print(f"Saved analysis results: {analysis_results_path}")
+        print(f"Analyzed {len(export_results)} jobs.")
 
     ### Pipline: 案件情報の分析結果の JSON ファイルからの読み込み
     ### Pipline: 案件情報の分析結果のランキング付け

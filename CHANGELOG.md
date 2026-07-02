@@ -1,7 +1,7 @@
 ## [0.4.0] - 2026-07-02
 
 ### Changed
-- READMEをGitHub公開・ポートフォリオ向けに整理
+- READMEをGitHub公開に向けて整理
 - CLIの実行方法、出力ファイル、開発ステータスを明確化
 - `--collect-jobs` 実行後に早期終了せず、`--analyze` 指定時は同一実行内で分析まで続行するように変更
 - `main.py` の collect / analyze / rank / display / report をそれぞれヘルパー関数へ分割

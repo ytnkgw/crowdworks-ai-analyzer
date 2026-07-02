@@ -30,7 +30,10 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument(
         "--collect-jobs",
         action="store_true",
-        help="指定したCrowdWorks URLから案件一覧と詳細情報を取得して jobs.json を生成する",
+        help=(
+            "指定したCrowdWorks URLから案件一覧と詳細情報を取得して "
+            f"{config.OUTPUT_JOBS_FILENAME} を生成する"
+        ),
     )
 
     parser.add_argument(
@@ -40,9 +43,21 @@ def build_parser() -> argparse.ArgumentParser:
     )
 
     parser.add_argument(
+        "--analyze",
+        action="store_true",
+        help=(
+            f"output/{config.OUTPUT_JOBS_FILENAME} を読み込んで AI 分析し "
+            f"output/{config.OUTPUT_ANALYSIS_RESULTS_FILENAME} を生成する"
+        ),
+    )
+
+    parser.add_argument(
         "--rank",
         action="store_true",
-        help="分析結果をランキングして output/ranked_jobs.json を生成する",
+        help=(
+            "分析結果をランキングして "
+            f"output/{config.OUTPUT_RANKED_JOBS_FILENAME} を生成する"
+        ),
     )
 
     parser.add_argument(
@@ -89,7 +104,7 @@ def _fill_application_deadline_from_jobs_json(
     output_dir: Path,
     analysis_items: list[dict],
 ) -> list[dict]:
-    jobs_path = output_dir / "jobs.json"
+    jobs_path = output_dir / config.OUTPUT_JOBS_FILENAME
     if not jobs_path.exists():
         return analysis_items
 
@@ -137,6 +152,79 @@ def _fill_application_deadline_from_jobs_json(
     return hydrated
 
 
+def _run_collect_pipeline(args: argparse.Namespace, output_dir: Path) -> None:
+    jobs = collect_jobs_from_url(args.url, limit=args.limit)
+    filtered_jobs, skipped_count = _filter_jobs_by_deadline(jobs)
+
+    raw_output_path = save_raw_jobs(filtered_jobs, args.url, output_dir=output_dir)
+    jobs_path = output_dir / config.OUTPUT_JOBS_FILENAME
+    export_jobs_to_json(filtered_jobs, jobs_path)
+    print(f"Saved raw jobs: {raw_output_path}")
+    print(f"Saved pipeline jobs: {jobs_path}")
+    if skipped_count > 0:
+        print(f"Skipped expired jobs: {skipped_count}")
+    print(f"Collected {len(filtered_jobs)} jobs.")
+
+
+def _run_analyze_pipeline(args: argparse.Namespace, output_dir: Path) -> bool:
+    jobs_path = output_dir / config.OUTPUT_JOBS_FILENAME
+    try:
+        jobs = load_jobs_from_json(jobs_path)
+    except FileNotFoundError:
+        print(f"jobs.json not found: {jobs_path}")
+        print("Run with --collect-jobs first.")
+        return False
+
+    filtered_jobs, skipped_count = _filter_jobs_by_deadline(jobs)
+    target_jobs = filtered_jobs[: args.limit]
+
+    export_results = []
+    for job in target_jobs:
+        result = analyze_job(job)
+        export_results.append(build_job_analysis_item(job, result))
+
+    analysis_results_path = output_dir / config.OUTPUT_ANALYSIS_RESULTS_FILENAME
+    export_job_analysis_results(export_results, analysis_results_path)
+
+    if skipped_count > 0:
+        print(f"Skipped expired jobs: {skipped_count}")
+    print(f"Saved analysis results: {analysis_results_path}")
+    print(f"Analyzed {len(export_results)} jobs.")
+    return True
+
+
+def _run_rank_pipeline(output_dir: Path) -> list[dict]:
+    analysis_results_path = output_dir / config.OUTPUT_ANALYSIS_RESULTS_FILENAME
+    analysis_results = load_json(analysis_results_path)
+    analysis_results = _fill_application_deadline_from_jobs_json(
+        output_dir, analysis_results
+    )
+    analysis_results, skipped_count = filter_expired_jobs(analysis_results)
+    if skipped_count > 0:
+        print(f"Skipped expired jobs: {skipped_count}")
+    export_job_analysis_results(analysis_results, analysis_results_path)
+    ranked_job_items = rank_job_analysis_results(analysis_results)
+    export_ranked_job_analysis_results(
+        ranked_job_items, output_dir / config.OUTPUT_RANKED_JOBS_FILENAME
+    )
+    return ranked_job_items
+
+
+def _run_display_ranking_pipeline(ranked_job_items: list[dict], limit: int) -> None:
+    ranked_text = format_ranked_jobs(ranked_job_items, limit)
+    print(ranked_text)
+
+
+def _run_export_report_pipeline(
+    ranked_job_items: list[dict], output_dir: Path, limit: int
+) -> None:
+    export_ranked_jobs_report(
+        ranked_job_items,
+        str(output_dir / config.OUTPUT_RANKED_REPORT_FILENAME),
+        limit=limit,
+    )
+
+
 def main(argv: list[str] | None = None) -> int:
     parser = build_parser()
     args = parser.parse_args(argv)
@@ -145,7 +233,13 @@ def main(argv: list[str] | None = None) -> int:
         parser.error("--collect-jobs を使用する場合は --url を指定してください。")
 
     if not any(
-        [args.rank, args.display_ranking, args.export_report, args.collect_jobs]
+        [
+            args.collect_jobs,
+            args.analyze,
+            args.rank,
+            args.display_ranking,
+            args.export_report,
+        ]
     ):
         parser.print_help()
         return 0
@@ -154,74 +248,38 @@ def main(argv: list[str] | None = None) -> int:
     output_dir = current_dir.parent / config.OUTPUT_DIR
     output_dir.mkdir(parents=True, exist_ok=True)
 
-    ### Pipline: 案件情報の収集と JSON ファイルへの保存
+    ### 収集
     if args.collect_jobs:
-        jobs = collect_jobs_from_url(args.url, limit=args.limit)
-        filtered_jobs, skipped_count = _filter_jobs_by_deadline(jobs)
+        _run_collect_pipeline(args, output_dir)
 
-        raw_output_path = save_raw_jobs(filtered_jobs, args.url, output_dir=output_dir)
-        export_jobs_to_json(filtered_jobs, output_dir / "jobs.json")
-        print(f"Saved raw jobs: {raw_output_path}")
-        print(f"Saved pipeline jobs: {output_dir / 'jobs.json'}")
-        if skipped_count > 0:
-            print(f"Skipped expired jobs: {skipped_count}")
-        print(f"Collected {len(filtered_jobs)} jobs.")
-        return 0
+    ### 分析
+    if args.analyze:
+        if not _run_analyze_pipeline(args, output_dir):
+            return 0
 
-    # ### Pipline: 案件情報の JSON ファイルからの読み込み
-    # jobs = load_jobs_from_json(output_dir / "jobs.json")
-
-    # ### Pipline: 案件情報の分析
-    # export_results = []
-    # for job in jobs[:10]:
-    #     result = analyze_job(job)
-    #     export_results.append(build_job_analysis_item(job, result))
-
-    # ### Pipline: 案件情報の分析結果の JSON ファイルへの保存
-    # export_job_analysis_results(export_results, output_dir / "analysis_results.json")
-
-    ### Pipline: 案件情報の分析結果の JSON ファイルからの読み込み
-    ### Pipline: 案件情報の分析結果のランキング付け
-    ### Pipline: 案件情報の分析結果のランキング付けの JSON ファイルへの保存
+    ### ランキング
     ranked_job_items: list[dict] = []
     if args.rank:
-        analysis_results_path = output_dir / "analysis_results.json"
-        analysis_results = load_json(analysis_results_path)
-        analysis_results = _fill_application_deadline_from_jobs_json(
-            output_dir, analysis_results
-        )
-        analysis_results, skipped_count = filter_expired_jobs(analysis_results)
-        if skipped_count > 0:
-            print(f"Skipped expired jobs: {skipped_count}")
-        export_job_analysis_results(analysis_results, analysis_results_path)
-        ranked_job_items = rank_job_analysis_results(analysis_results)
-        export_ranked_job_analysis_results(
-            ranked_job_items, output_dir / "ranked_jobs.json"
-        )
-    ### Pipline: 案件情報の分析結果のランキング付けの JSON ファイルからの読み込み
-    if not ranked_job_items and (output_dir / "ranked_jobs.json").exists():
-        ranked_job_items = load_json(output_dir / "ranked_jobs.json")
+        ranked_job_items = _run_rank_pipeline(output_dir)
+
+    ### ランキング読込
+    ranked_jobs_path = output_dir / config.OUTPUT_RANKED_JOBS_FILENAME
+    if not ranked_job_items and ranked_jobs_path.exists():
+        ranked_job_items = load_json(ranked_jobs_path)
 
     if ranked_job_items:
         ranked_job_items, skipped_count = filter_expired_jobs(ranked_job_items)
         if skipped_count > 0:
             print(f"Skipped expired jobs: {skipped_count}")
-            export_ranked_job_analysis_results(
-                ranked_job_items, output_dir / "ranked_jobs.json"
-            )
+            export_ranked_job_analysis_results(ranked_job_items, ranked_jobs_path)
 
-    ### Pipline: ランキング結果の表示用整形
+    ### 表示
     if args.display_ranking:
-        ranked_text = format_ranked_jobs(ranked_job_items, args.limit)
-        print(ranked_text)
+        _run_display_ranking_pipeline(ranked_job_items, args.limit)
 
-    ### Pipline: ランキング結果の Markdown レポート出力
+    ### レポート出力
     if args.export_report:
-        export_ranked_jobs_report(
-            ranked_job_items,
-            str(output_dir / "ranked_jobs_report.md"),
-            limit=args.limit,
-        )
+        _run_export_report_pipeline(ranked_job_items, output_dir, args.limit)
 
     return 0
 

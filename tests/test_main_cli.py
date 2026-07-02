@@ -12,6 +12,7 @@ sys.path.append(str(Path(__file__).resolve().parents[1] / "src"))
 import config
 import main
 import job_collector
+from models import AnalysisResult
 
 
 class _CollectedArgs(TypedDict):
@@ -22,9 +23,17 @@ class _CollectedArgs(TypedDict):
 def test_build_parser_defines_expected_flags() -> None:
     parser = main.build_parser()
     args = parser.parse_args(
-        ["--rank", "--display-ranking", "--export-report", "--limit", "3"]
+        [
+            "--analyze",
+            "--rank",
+            "--display-ranking",
+            "--export-report",
+            "--limit",
+            "3",
+        ]
     )
 
+    assert args.analyze is True
     assert args.rank is True
     assert args.display_ranking is True
     assert args.export_report is True
@@ -38,7 +47,7 @@ def test_main_rank_only_generates_ranked_jobs_json(
     output_dir.mkdir()
     monkeypatch.setattr(config, "OUTPUT_DIR", str(output_dir))
 
-    analysis_results_path = output_dir / "analysis_results.json"
+    analysis_results_path = output_dir / config.OUTPUT_ANALYSIS_RESULTS_FILENAME
     analysis_results_path.write_text(
         json.dumps(
             [
@@ -72,10 +81,10 @@ def test_main_rank_only_generates_ranked_jobs_json(
     exit_code = main.main(["--rank"])
 
     assert exit_code == 0
-    assert (output_dir / "ranked_jobs.json").exists()
+    assert (output_dir / config.OUTPUT_RANKED_JOBS_FILENAME).exists()
 
     ranked_items = json.loads(
-        (output_dir / "ranked_jobs.json").read_text(encoding="utf-8")
+        (output_dir / config.OUTPUT_RANKED_JOBS_FILENAME).read_text(encoding="utf-8")
     )
     assert len(ranked_items) == 2
     assert ranked_items[0]["rank"] == 1
@@ -91,7 +100,7 @@ def test_main_display_ranking_outputs_limited_ranked_content(
     output_dir.mkdir()
     monkeypatch.setattr(config, "OUTPUT_DIR", str(output_dir))
 
-    ranked_jobs_path = output_dir / "ranked_jobs.json"
+    ranked_jobs_path = output_dir / config.OUTPUT_RANKED_JOBS_FILENAME
     ranked_jobs_path.write_text(
         json.dumps(
             [
@@ -138,7 +147,7 @@ def test_main_export_report_writes_markdown_file(
     output_dir.mkdir()
     monkeypatch.setattr(config, "OUTPUT_DIR", str(output_dir))
 
-    ranked_jobs_path = output_dir / "ranked_jobs.json"
+    ranked_jobs_path = output_dir / config.OUTPUT_RANKED_JOBS_FILENAME
     ranked_jobs_path.write_text(
         json.dumps(
             [
@@ -166,7 +175,9 @@ def test_main_export_report_writes_markdown_file(
     exit_code = main.main(["--export-report", "--limit", "1"])
 
     assert exit_code == 0
-    report_text = (output_dir / "ranked_jobs_report.md").read_text(encoding="utf-8")
+    report_text = (output_dir / config.OUTPUT_RANKED_REPORT_FILENAME).read_text(
+        encoding="utf-8"
+    )
     assert "# CrowdWorks Job Ranking Report" in report_text
     assert "案件A" in report_text
     assert "Displayed Jobs: 1" in report_text
@@ -179,7 +190,7 @@ def test_main_limit_affects_display_and_report_output(
     output_dir.mkdir()
     monkeypatch.setattr(config, "OUTPUT_DIR", str(output_dir))
 
-    ranked_jobs_path = output_dir / "ranked_jobs.json"
+    ranked_jobs_path = output_dir / config.OUTPUT_RANKED_JOBS_FILENAME
     ranked_jobs_path.write_text(
         json.dumps(
             [
@@ -214,7 +225,7 @@ def test_main_multiple_options_run_in_expected_order(
     output_dir.mkdir()
     monkeypatch.setattr(config, "OUTPUT_DIR", str(output_dir))
 
-    ranked_jobs_path = output_dir / "ranked_jobs.json"
+    ranked_jobs_path = output_dir / config.OUTPUT_RANKED_JOBS_FILENAME
     ranked_jobs_path.write_text(
         json.dumps(
             [
@@ -234,7 +245,7 @@ def test_main_multiple_options_run_in_expected_order(
 
     assert exit_code == 0
     assert "案件A" in output.getvalue()
-    assert (output_dir / "ranked_jobs_report.md").exists()
+    assert (output_dir / config.OUTPUT_RANKED_REPORT_FILENAME).exists()
 
 
 def test_main_shows_help_and_skips_work_when_no_options(
@@ -250,11 +261,143 @@ def test_main_shows_help_and_skips_work_when_no_options(
 
     assert exit_code == 0
     assert "python3 src/main.py" in help_output.getvalue()
+    assert "--analyze" in help_output.getvalue()
     assert "--rank" in help_output.getvalue()
-    assert "output/ranked_jobs.json" in help_output.getvalue()
+    assert f"output/{config.OUTPUT_RANKED_JOBS_FILENAME}" in help_output.getvalue()
     assert "default: 10000" in help_output.getvalue()
-    assert not (output_dir / "ranked_jobs.json").exists()
-    assert not (output_dir / "ranked_jobs_report.md").exists()
+    assert not (output_dir / config.OUTPUT_RANKED_JOBS_FILENAME).exists()
+    assert not (output_dir / config.OUTPUT_RANKED_REPORT_FILENAME).exists()
+
+
+def test_main_analyze_writes_analysis_results_with_limit(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    output_dir = tmp_path / "output"
+    output_dir.mkdir()
+    monkeypatch.setattr(config, "OUTPUT_DIR", str(output_dir))
+
+    jobs_path = output_dir / config.OUTPUT_JOBS_FILENAME
+    jobs_path.write_text(
+        json.dumps(
+            [
+                {
+                    "id": 1,
+                    "title": "案件A",
+                    "url": "https://example.com/jobs/1",
+                },
+                {
+                    "id": 2,
+                    "title": "案件B",
+                    "url": "https://example.com/jobs/2",
+                },
+            ]
+        ),
+        encoding="utf-8",
+    )
+
+    monkeypatch.setattr(main, "should_exclude_by_deadline", lambda _: False)
+
+    calls: list[int] = []
+
+    def fake_analyze_job(job: job_collector.Job) -> AnalysisResult:
+        calls.append(job.id)
+        return AnalysisResult.from_dict(
+            {
+                "reward_score": 3,
+                "competition_score": 3,
+                "ai_score": 3,
+                "continuity_score": 3,
+                "quality_score": 3,
+                "total_score": 75,
+                "recommendation_reasons": [],
+                "concerns": [],
+                "application_strategy": [],
+                "overall_comment": "ok",
+            }
+        )
+
+    monkeypatch.setattr(main, "analyze_job", fake_analyze_job)
+
+    output = io.StringIO()
+    with redirect_stdout(output):
+        exit_code = main.main(["--analyze", "--limit", "1"])
+
+    assert exit_code == 0
+    assert calls == [1]
+    assert (output_dir / config.OUTPUT_ANALYSIS_RESULTS_FILENAME).exists()
+
+    payload = json.loads(
+        (output_dir / config.OUTPUT_ANALYSIS_RESULTS_FILENAME).read_text("utf-8")
+    )
+    assert len(payload) == 1
+    assert payload[0]["job"]["id"] == 1
+    assert "Saved analysis results:" in output.getvalue()
+    assert "Analyzed 1 jobs." in output.getvalue()
+
+
+def test_main_analyze_excludes_expired_deadline_jobs_and_prints_skipped(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    output_dir = tmp_path / "output"
+    output_dir.mkdir()
+    monkeypatch.setattr(config, "OUTPUT_DIR", str(output_dir))
+
+    jobs_path = output_dir / config.OUTPUT_JOBS_FILENAME
+    jobs_path.write_text(
+        json.dumps(
+            [
+                {
+                    "id": 1,
+                    "title": "期限切れ案件",
+                    "url": "https://example.com/jobs/1",
+                    "application_deadline": "2026年07月01日",
+                },
+                {
+                    "id": 2,
+                    "title": "募集中案件",
+                    "url": "https://example.com/jobs/2",
+                    "application_deadline": "2026年07月02日",
+                },
+            ]
+        ),
+        encoding="utf-8",
+    )
+
+    monkeypatch.setattr(
+        main,
+        "should_exclude_by_deadline",
+        lambda deadline: deadline == "2026年07月01日",
+    )
+
+    calls: list[int] = []
+
+    def fake_analyze_job(job: job_collector.Job) -> AnalysisResult:
+        calls.append(job.id)
+        return AnalysisResult.from_dict(
+            {
+                "reward_score": 3,
+                "competition_score": 3,
+                "ai_score": 3,
+                "continuity_score": 3,
+                "quality_score": 3,
+                "total_score": 75,
+                "recommendation_reasons": [],
+                "concerns": [],
+                "application_strategy": [],
+                "overall_comment": "ok",
+            }
+        )
+
+    monkeypatch.setattr(main, "analyze_job", fake_analyze_job)
+
+    output = io.StringIO()
+    with redirect_stdout(output):
+        exit_code = main.main(["--analyze"])
+
+    assert exit_code == 0
+    assert calls == [2]
+    assert "Skipped expired jobs: 1" in output.getvalue()
+    assert "Analyzed 1 jobs." in output.getvalue()
 
 
 def test_build_parser_supports_collect_jobs_and_url() -> None:
@@ -319,7 +462,7 @@ def test_main_collect_jobs_passes_limit_to_collector(
     assert exit_code == 0
     assert captured["url"] == "https://example.com/public/jobs/group/development?page=2"
     assert captured["limit"] == 2
-    assert (output_dir / "jobs.json").exists()
+    assert (output_dir / config.OUTPUT_JOBS_FILENAME).exists()
     raw_files = list((output_dir / "raw").glob("jobs_*_development_02.json"))
     assert len(raw_files) == 1
     assert "Saved raw jobs:" in output.getvalue()
@@ -369,7 +512,9 @@ def test_main_collect_jobs_excludes_expired_deadline_jobs(
         )
 
     assert exit_code == 0
-    jobs_payload = json.loads((output_dir / "jobs.json").read_text(encoding="utf-8"))
+    jobs_payload = json.loads(
+        (output_dir / config.OUTPUT_JOBS_FILENAME).read_text(encoding="utf-8")
+    )
     assert len(jobs_payload) == 1
     assert jobs_payload[0]["title"] == "募集中案件"
     assert "Skipped expired jobs: 1" in output.getvalue()
@@ -382,7 +527,7 @@ def test_main_rank_excludes_expired_deadline_jobs(
     output_dir.mkdir()
     monkeypatch.setattr(config, "OUTPUT_DIR", str(output_dir))
 
-    analysis_results_path = output_dir / "analysis_results.json"
+    analysis_results_path = output_dir / config.OUTPUT_ANALYSIS_RESULTS_FILENAME
     analysis_results_path.write_text(
         json.dumps(
             [
@@ -419,7 +564,7 @@ def test_main_rank_excludes_expired_deadline_jobs(
 
     assert exit_code == 0
     ranked_items = json.loads(
-        (output_dir / "ranked_jobs.json").read_text(encoding="utf-8")
+        (output_dir / config.OUTPUT_RANKED_JOBS_FILENAME).read_text(encoding="utf-8")
     )
     assert len(ranked_items) == 1
     assert ranked_items[0]["job"]["title"] == "募集中案件"
@@ -433,7 +578,7 @@ def test_main_runs_rank_display_and_report_flow(
     output_dir.mkdir()
     monkeypatch.setattr(config, "OUTPUT_DIR", str(output_dir))
 
-    analysis_results_path = output_dir / "analysis_results.json"
+    analysis_results_path = output_dir / config.OUTPUT_ANALYSIS_RESULTS_FILENAME
     analysis_results_path.write_text(
         json.dumps(
             [
@@ -459,5 +604,152 @@ def test_main_runs_rank_display_and_report_flow(
     )
 
     assert exit_code == 0
-    assert (output_dir / "ranked_jobs.json").exists()
-    assert (output_dir / "ranked_jobs_report.md").exists()
+    assert (output_dir / config.OUTPUT_RANKED_JOBS_FILENAME).exists()
+    assert (output_dir / config.OUTPUT_RANKED_REPORT_FILENAME).exists()
+
+
+def test_main_analyze_and_rank_generate_both_outputs(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    output_dir = tmp_path / "output"
+    output_dir.mkdir()
+    monkeypatch.setattr(config, "OUTPUT_DIR", str(output_dir))
+
+    jobs_path = output_dir / config.OUTPUT_JOBS_FILENAME
+    jobs_path.write_text(
+        json.dumps(
+            [
+                {
+                    "id": 1,
+                    "title": "案件A",
+                    "url": "https://example.com/jobs/1",
+                },
+                {
+                    "id": 2,
+                    "title": "案件B",
+                    "url": "https://example.com/jobs/2",
+                },
+            ]
+        ),
+        encoding="utf-8",
+    )
+
+    monkeypatch.setattr(main, "should_exclude_by_deadline", lambda _: False)
+
+    def fake_analyze_job(job: job_collector.Job) -> AnalysisResult:
+        score = 90 if job.id == 1 else 80
+        return AnalysisResult.from_dict(
+            {
+                "reward_score": 3,
+                "competition_score": 3,
+                "ai_score": 3,
+                "continuity_score": 3,
+                "quality_score": 3,
+                "total_score": score,
+                "recommendation_reasons": [],
+                "concerns": [],
+                "application_strategy": [],
+                "overall_comment": "ok",
+            }
+        )
+
+    monkeypatch.setattr(main, "analyze_job", fake_analyze_job)
+
+    exit_code = main.main(["--analyze", "--rank"])
+
+    assert exit_code == 0
+    assert (output_dir / config.OUTPUT_ANALYSIS_RESULTS_FILENAME).exists()
+    assert (output_dir / config.OUTPUT_RANKED_JOBS_FILENAME).exists()
+
+    analysis_payload = json.loads(
+        (output_dir / config.OUTPUT_ANALYSIS_RESULTS_FILENAME).read_text(
+            encoding="utf-8"
+        )
+    )
+    ranked_payload = json.loads(
+        (output_dir / config.OUTPUT_RANKED_JOBS_FILENAME).read_text(encoding="utf-8")
+    )
+
+    assert len(analysis_payload) == 2
+    assert len(ranked_payload) == 2
+    assert ranked_payload[0]["job"]["id"] == 1
+    assert ranked_payload[0]["rank"] == 1
+
+
+def test_main_analyze_without_jobs_json_prints_message_and_exits(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    output_dir = tmp_path / "output"
+    output_dir.mkdir()
+    monkeypatch.setattr(config, "OUTPUT_DIR", str(output_dir))
+
+    output = io.StringIO()
+    with redirect_stdout(output):
+        exit_code = main.main(["--analyze"])
+
+    assert exit_code == 0
+    assert f"{config.OUTPUT_JOBS_FILENAME} not found:" in output.getvalue()
+    assert "Run with --collect-jobs first." in output.getvalue()
+
+
+def test_main_collect_jobs_and_analyze_runs_both_pipelines(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    output_dir = tmp_path / "output"
+    output_dir.mkdir()
+    monkeypatch.setattr(config, "OUTPUT_DIR", str(output_dir))
+
+    def fake_collect_jobs_from_url(
+        url: str, limit: int | None = None
+    ) -> list[job_collector.Job]:
+        return [
+            job_collector.Job(
+                id=1,
+                title="案件A",
+                url="https://example.com/jobs/1",
+            )
+        ]
+
+    monkeypatch.setattr(main, "collect_jobs_from_url", fake_collect_jobs_from_url)
+    monkeypatch.setattr(main, "should_exclude_by_deadline", lambda _: False)
+
+    calls: list[int] = []
+
+    def fake_analyze_job(job: job_collector.Job) -> AnalysisResult:
+        calls.append(job.id)
+        return AnalysisResult.from_dict(
+            {
+                "reward_score": 3,
+                "competition_score": 3,
+                "ai_score": 3,
+                "continuity_score": 3,
+                "quality_score": 3,
+                "total_score": 75,
+                "recommendation_reasons": [],
+                "concerns": [],
+                "application_strategy": [],
+                "overall_comment": "ok",
+            }
+        )
+
+    monkeypatch.setattr(main, "analyze_job", fake_analyze_job)
+
+    output = io.StringIO()
+    with redirect_stdout(output):
+        exit_code = main.main(
+            [
+                "--collect-jobs",
+                "--analyze",
+                "--url",
+                "https://example.com/public/jobs/group/ai_bpo",
+                "--limit",
+                "5",
+            ]
+        )
+
+    assert exit_code == 0
+    assert calls == [1]
+    assert (output_dir / config.OUTPUT_JOBS_FILENAME).exists()
+    assert (output_dir / config.OUTPUT_ANALYSIS_RESULTS_FILENAME).exists()
+    assert "Collected 1 jobs." in output.getvalue()
+    assert "Analyzed 1 jobs." in output.getvalue()

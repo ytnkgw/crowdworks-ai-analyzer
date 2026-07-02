@@ -142,6 +142,20 @@ output/jobs.json
 output/raw/jobs_YYYYMMDD_{category}_{page:02d}.json
 ```
 
+### 収集済み案件をAI分析
+
+事前に `output/jobs.json` が存在する状態で、以下を実行します。
+
+```bash
+python3 src/main.py --analyze --limit 10
+```
+
+分析結果は以下に保存されます。
+
+```text
+output/analysis_results.json
+```
+
 ### 分析結果をランキング
 
 事前に `output/analysis_results.json` が存在する状態で、以下を実行します。

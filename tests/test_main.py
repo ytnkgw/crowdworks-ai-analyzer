@@ -4,12 +4,13 @@ from pathlib import Path
 
 sys.path.append(str(Path(__file__).resolve().parents[1] / "src"))
 
+import config
 from main import load_jobs_from_json
 from models import Job
 
 
 def test_load_jobs_from_json_creates_job_list(tmp_path: Path) -> None:
-    output_path = tmp_path / "jobs.json"
+    output_path = tmp_path / config.OUTPUT_JOBS_FILENAME
     payload = [
         {
             "id": 1,

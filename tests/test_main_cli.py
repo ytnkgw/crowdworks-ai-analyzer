@@ -47,7 +47,7 @@ def test_main_rank_only_generates_ranked_jobs_json(
     output_dir.mkdir()
     monkeypatch.setattr(config, "OUTPUT_DIR", str(output_dir))
 
-    analysis_results_path = output_dir / "analysis_results.json"
+    analysis_results_path = output_dir / config.OUTPUT_ANALYSIS_RESULTS_FILENAME
     analysis_results_path.write_text(
         json.dumps(
             [
@@ -81,10 +81,10 @@ def test_main_rank_only_generates_ranked_jobs_json(
     exit_code = main.main(["--rank"])
 
     assert exit_code == 0
-    assert (output_dir / "ranked_jobs.json").exists()
+    assert (output_dir / config.OUTPUT_RANKED_JOBS_FILENAME).exists()
 
     ranked_items = json.loads(
-        (output_dir / "ranked_jobs.json").read_text(encoding="utf-8")
+        (output_dir / config.OUTPUT_RANKED_JOBS_FILENAME).read_text(encoding="utf-8")
     )
     assert len(ranked_items) == 2
     assert ranked_items[0]["rank"] == 1
@@ -100,7 +100,7 @@ def test_main_display_ranking_outputs_limited_ranked_content(
     output_dir.mkdir()
     monkeypatch.setattr(config, "OUTPUT_DIR", str(output_dir))
 
-    ranked_jobs_path = output_dir / "ranked_jobs.json"
+    ranked_jobs_path = output_dir / config.OUTPUT_RANKED_JOBS_FILENAME
     ranked_jobs_path.write_text(
         json.dumps(
             [
@@ -147,7 +147,7 @@ def test_main_export_report_writes_markdown_file(
     output_dir.mkdir()
     monkeypatch.setattr(config, "OUTPUT_DIR", str(output_dir))
 
-    ranked_jobs_path = output_dir / "ranked_jobs.json"
+    ranked_jobs_path = output_dir / config.OUTPUT_RANKED_JOBS_FILENAME
     ranked_jobs_path.write_text(
         json.dumps(
             [
@@ -175,7 +175,9 @@ def test_main_export_report_writes_markdown_file(
     exit_code = main.main(["--export-report", "--limit", "1"])
 
     assert exit_code == 0
-    report_text = (output_dir / "ranked_jobs_report.md").read_text(encoding="utf-8")
+    report_text = (output_dir / config.OUTPUT_RANKED_REPORT_FILENAME).read_text(
+        encoding="utf-8"
+    )
     assert "# CrowdWorks Job Ranking Report" in report_text
     assert "案件A" in report_text
     assert "Displayed Jobs: 1" in report_text
@@ -188,7 +190,7 @@ def test_main_limit_affects_display_and_report_output(
     output_dir.mkdir()
     monkeypatch.setattr(config, "OUTPUT_DIR", str(output_dir))
 
-    ranked_jobs_path = output_dir / "ranked_jobs.json"
+    ranked_jobs_path = output_dir / config.OUTPUT_RANKED_JOBS_FILENAME
     ranked_jobs_path.write_text(
         json.dumps(
             [
@@ -223,7 +225,7 @@ def test_main_multiple_options_run_in_expected_order(
     output_dir.mkdir()
     monkeypatch.setattr(config, "OUTPUT_DIR", str(output_dir))
 
-    ranked_jobs_path = output_dir / "ranked_jobs.json"
+    ranked_jobs_path = output_dir / config.OUTPUT_RANKED_JOBS_FILENAME
     ranked_jobs_path.write_text(
         json.dumps(
             [
@@ -243,7 +245,7 @@ def test_main_multiple_options_run_in_expected_order(
 
     assert exit_code == 0
     assert "案件A" in output.getvalue()
-    assert (output_dir / "ranked_jobs_report.md").exists()
+    assert (output_dir / config.OUTPUT_RANKED_REPORT_FILENAME).exists()
 
 
 def test_main_shows_help_and_skips_work_when_no_options(
@@ -261,10 +263,10 @@ def test_main_shows_help_and_skips_work_when_no_options(
     assert "python3 src/main.py" in help_output.getvalue()
     assert "--analyze" in help_output.getvalue()
     assert "--rank" in help_output.getvalue()
-    assert "output/ranked_jobs.json" in help_output.getvalue()
+    assert f"output/{config.OUTPUT_RANKED_JOBS_FILENAME}" in help_output.getvalue()
     assert "default: 10000" in help_output.getvalue()
-    assert not (output_dir / "ranked_jobs.json").exists()
-    assert not (output_dir / "ranked_jobs_report.md").exists()
+    assert not (output_dir / config.OUTPUT_RANKED_JOBS_FILENAME).exists()
+    assert not (output_dir / config.OUTPUT_RANKED_REPORT_FILENAME).exists()
 
 
 def test_main_analyze_writes_analysis_results_with_limit(
@@ -274,7 +276,7 @@ def test_main_analyze_writes_analysis_results_with_limit(
     output_dir.mkdir()
     monkeypatch.setattr(config, "OUTPUT_DIR", str(output_dir))
 
-    jobs_path = output_dir / "jobs.json"
+    jobs_path = output_dir / config.OUTPUT_JOBS_FILENAME
     jobs_path.write_text(
         json.dumps(
             [
@@ -322,9 +324,11 @@ def test_main_analyze_writes_analysis_results_with_limit(
 
     assert exit_code == 0
     assert calls == [1]
-    assert (output_dir / "analysis_results.json").exists()
+    assert (output_dir / config.OUTPUT_ANALYSIS_RESULTS_FILENAME).exists()
 
-    payload = json.loads((output_dir / "analysis_results.json").read_text("utf-8"))
+    payload = json.loads(
+        (output_dir / config.OUTPUT_ANALYSIS_RESULTS_FILENAME).read_text("utf-8")
+    )
     assert len(payload) == 1
     assert payload[0]["job"]["id"] == 1
     assert "Saved analysis results:" in output.getvalue()
@@ -338,7 +342,7 @@ def test_main_analyze_excludes_expired_deadline_jobs_and_prints_skipped(
     output_dir.mkdir()
     monkeypatch.setattr(config, "OUTPUT_DIR", str(output_dir))
 
-    jobs_path = output_dir / "jobs.json"
+    jobs_path = output_dir / config.OUTPUT_JOBS_FILENAME
     jobs_path.write_text(
         json.dumps(
             [
@@ -458,7 +462,7 @@ def test_main_collect_jobs_passes_limit_to_collector(
     assert exit_code == 0
     assert captured["url"] == "https://example.com/public/jobs/group/development?page=2"
     assert captured["limit"] == 2
-    assert (output_dir / "jobs.json").exists()
+    assert (output_dir / config.OUTPUT_JOBS_FILENAME).exists()
     raw_files = list((output_dir / "raw").glob("jobs_*_development_02.json"))
     assert len(raw_files) == 1
     assert "Saved raw jobs:" in output.getvalue()
@@ -508,7 +512,9 @@ def test_main_collect_jobs_excludes_expired_deadline_jobs(
         )
 
     assert exit_code == 0
-    jobs_payload = json.loads((output_dir / "jobs.json").read_text(encoding="utf-8"))
+    jobs_payload = json.loads(
+        (output_dir / config.OUTPUT_JOBS_FILENAME).read_text(encoding="utf-8")
+    )
     assert len(jobs_payload) == 1
     assert jobs_payload[0]["title"] == "募集中案件"
     assert "Skipped expired jobs: 1" in output.getvalue()
@@ -521,7 +527,7 @@ def test_main_rank_excludes_expired_deadline_jobs(
     output_dir.mkdir()
     monkeypatch.setattr(config, "OUTPUT_DIR", str(output_dir))
 
-    analysis_results_path = output_dir / "analysis_results.json"
+    analysis_results_path = output_dir / config.OUTPUT_ANALYSIS_RESULTS_FILENAME
     analysis_results_path.write_text(
         json.dumps(
             [
@@ -558,7 +564,7 @@ def test_main_rank_excludes_expired_deadline_jobs(
 
     assert exit_code == 0
     ranked_items = json.loads(
-        (output_dir / "ranked_jobs.json").read_text(encoding="utf-8")
+        (output_dir / config.OUTPUT_RANKED_JOBS_FILENAME).read_text(encoding="utf-8")
     )
     assert len(ranked_items) == 1
     assert ranked_items[0]["job"]["title"] == "募集中案件"
@@ -572,7 +578,7 @@ def test_main_runs_rank_display_and_report_flow(
     output_dir.mkdir()
     monkeypatch.setattr(config, "OUTPUT_DIR", str(output_dir))
 
-    analysis_results_path = output_dir / "analysis_results.json"
+    analysis_results_path = output_dir / config.OUTPUT_ANALYSIS_RESULTS_FILENAME
     analysis_results_path.write_text(
         json.dumps(
             [
@@ -598,8 +604,8 @@ def test_main_runs_rank_display_and_report_flow(
     )
 
     assert exit_code == 0
-    assert (output_dir / "ranked_jobs.json").exists()
-    assert (output_dir / "ranked_jobs_report.md").exists()
+    assert (output_dir / config.OUTPUT_RANKED_JOBS_FILENAME).exists()
+    assert (output_dir / config.OUTPUT_RANKED_REPORT_FILENAME).exists()
 
 
 def test_main_analyze_and_rank_generate_both_outputs(
@@ -609,7 +615,7 @@ def test_main_analyze_and_rank_generate_both_outputs(
     output_dir.mkdir()
     monkeypatch.setattr(config, "OUTPUT_DIR", str(output_dir))
 
-    jobs_path = output_dir / "jobs.json"
+    jobs_path = output_dir / config.OUTPUT_JOBS_FILENAME
     jobs_path.write_text(
         json.dumps(
             [
@@ -652,14 +658,16 @@ def test_main_analyze_and_rank_generate_both_outputs(
     exit_code = main.main(["--analyze", "--rank"])
 
     assert exit_code == 0
-    assert (output_dir / "analysis_results.json").exists()
-    assert (output_dir / "ranked_jobs.json").exists()
+    assert (output_dir / config.OUTPUT_ANALYSIS_RESULTS_FILENAME).exists()
+    assert (output_dir / config.OUTPUT_RANKED_JOBS_FILENAME).exists()
 
     analysis_payload = json.loads(
-        (output_dir / "analysis_results.json").read_text(encoding="utf-8")
+        (output_dir / config.OUTPUT_ANALYSIS_RESULTS_FILENAME).read_text(
+            encoding="utf-8"
+        )
     )
     ranked_payload = json.loads(
-        (output_dir / "ranked_jobs.json").read_text(encoding="utf-8")
+        (output_dir / config.OUTPUT_RANKED_JOBS_FILENAME).read_text(encoding="utf-8")
     )
 
     assert len(analysis_payload) == 2
@@ -668,15 +676,20 @@ def test_main_analyze_and_rank_generate_both_outputs(
     assert ranked_payload[0]["rank"] == 1
 
 
-def test_main_analyze_without_jobs_json_raises_file_not_found(
+def test_main_analyze_without_jobs_json_prints_message_and_exits(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     output_dir = tmp_path / "output"
     output_dir.mkdir()
     monkeypatch.setattr(config, "OUTPUT_DIR", str(output_dir))
 
-    with pytest.raises(FileNotFoundError):
-        main.main(["--analyze"])
+    output = io.StringIO()
+    with redirect_stdout(output):
+        exit_code = main.main(["--analyze"])
+
+    assert exit_code == 0
+    assert f"{config.OUTPUT_JOBS_FILENAME} not found:" in output.getvalue()
+    assert "Run with --collect-jobs first." in output.getvalue()
 
 
 def test_main_collect_jobs_and_analyze_runs_both_pipelines(
@@ -736,7 +749,7 @@ def test_main_collect_jobs_and_analyze_runs_both_pipelines(
 
     assert exit_code == 0
     assert calls == [1]
-    assert (output_dir / "jobs.json").exists()
-    assert (output_dir / "analysis_results.json").exists()
+    assert (output_dir / config.OUTPUT_JOBS_FILENAME).exists()
+    assert (output_dir / config.OUTPUT_ANALYSIS_RESULTS_FILENAME).exists()
     assert "Collected 1 jobs." in output.getvalue()
     assert "Analyzed 1 jobs." in output.getvalue()

@@ -3,6 +3,7 @@ from pathlib import Path
 
 sys.path.append(str(Path(__file__).resolve().parents[1] / "src"))
 
+import config
 from report_exporter import (
     export_ranked_jobs_report,
     format_ranked_job_as_markdown,
@@ -47,7 +48,7 @@ def test_format_ranked_jobs_report_returns_message_for_empty_input() -> None:
 
 
 def test_export_ranked_jobs_report_writes_markdown_file(tmp_path: Path) -> None:
-    output_path = tmp_path / "ranked_jobs_report.md"
+    output_path = tmp_path / config.OUTPUT_RANKED_REPORT_FILENAME
     items = [
         {
             "rank": 1,

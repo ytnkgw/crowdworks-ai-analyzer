@@ -4,6 +4,7 @@ from pathlib import Path
 
 sys.path.append(str(Path(__file__).resolve().parents[1] / "src"))
 
+import config
 from exporter import (
     build_raw_jobs_filename,
     build_job_analysis_item,
@@ -42,7 +43,7 @@ def test_build_job_analysis_item_creates_expected_dict() -> None:
 
 def test_export_job_analysis_results_writes_expected_json(tmp_path: Path) -> None:
     print(tmp_path)
-    output_path = tmp_path / "analysis_results.json"
+    output_path = tmp_path / config.OUTPUT_ANALYSIS_RESULTS_FILENAME
     items = [
         {
             "job": {
@@ -103,7 +104,7 @@ def test_export_jobs_to_json_includes_detail_fields(tmp_path: Path) -> None:
         )
     ]
 
-    output_path = tmp_path / "jobs.json"
+    output_path = tmp_path / config.OUTPUT_JOBS_FILENAME
     export_jobs_to_json(jobs, output_path)
 
     written = json.loads(output_path.read_text(encoding="utf-8"))

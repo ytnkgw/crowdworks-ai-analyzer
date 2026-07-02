@@ -178,7 +178,6 @@ def main(argv: list[str] | None = None) -> int:
         if skipped_count > 0:
             print(f"Skipped expired jobs: {skipped_count}")
         print(f"Collected {len(filtered_jobs)} jobs.")
-        return 0
 
     ### Pipline: 案件情報の JSON ファイルからの読み込、分析、保存
     if args.analyze:

@@ -600,3 +600,143 @@ def test_main_runs_rank_display_and_report_flow(
     assert exit_code == 0
     assert (output_dir / "ranked_jobs.json").exists()
     assert (output_dir / "ranked_jobs_report.md").exists()
+
+
+def test_main_analyze_and_rank_generate_both_outputs(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    output_dir = tmp_path / "output"
+    output_dir.mkdir()
+    monkeypatch.setattr(config, "OUTPUT_DIR", str(output_dir))
+
+    jobs_path = output_dir / "jobs.json"
+    jobs_path.write_text(
+        json.dumps(
+            [
+                {
+                    "id": 1,
+                    "title": "案件A",
+                    "url": "https://example.com/jobs/1",
+                },
+                {
+                    "id": 2,
+                    "title": "案件B",
+                    "url": "https://example.com/jobs/2",
+                },
+            ]
+        ),
+        encoding="utf-8",
+    )
+
+    monkeypatch.setattr(main, "should_exclude_by_deadline", lambda _: False)
+
+    def fake_analyze_job(job: job_collector.Job) -> AnalysisResult:
+        score = 90 if job.id == 1 else 80
+        return AnalysisResult.from_dict(
+            {
+                "reward_score": 3,
+                "competition_score": 3,
+                "ai_score": 3,
+                "continuity_score": 3,
+                "quality_score": 3,
+                "total_score": score,
+                "recommendation_reasons": [],
+                "concerns": [],
+                "application_strategy": [],
+                "overall_comment": "ok",
+            }
+        )
+
+    monkeypatch.setattr(main, "analyze_job", fake_analyze_job)
+
+    exit_code = main.main(["--analyze", "--rank"])
+
+    assert exit_code == 0
+    assert (output_dir / "analysis_results.json").exists()
+    assert (output_dir / "ranked_jobs.json").exists()
+
+    analysis_payload = json.loads(
+        (output_dir / "analysis_results.json").read_text(encoding="utf-8")
+    )
+    ranked_payload = json.loads(
+        (output_dir / "ranked_jobs.json").read_text(encoding="utf-8")
+    )
+
+    assert len(analysis_payload) == 2
+    assert len(ranked_payload) == 2
+    assert ranked_payload[0]["job"]["id"] == 1
+    assert ranked_payload[0]["rank"] == 1
+
+
+def test_main_analyze_without_jobs_json_raises_file_not_found(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    output_dir = tmp_path / "output"
+    output_dir.mkdir()
+    monkeypatch.setattr(config, "OUTPUT_DIR", str(output_dir))
+
+    with pytest.raises(FileNotFoundError):
+        main.main(["--analyze"])
+
+
+def test_main_collect_jobs_and_analyze_runs_both_pipelines(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    output_dir = tmp_path / "output"
+    output_dir.mkdir()
+    monkeypatch.setattr(config, "OUTPUT_DIR", str(output_dir))
+
+    def fake_collect_jobs_from_url(
+        url: str, limit: int | None = None
+    ) -> list[job_collector.Job]:
+        return [
+            job_collector.Job(
+                id=1,
+                title="案件A",
+                url="https://example.com/jobs/1",
+            )
+        ]
+
+    monkeypatch.setattr(main, "collect_jobs_from_url", fake_collect_jobs_from_url)
+    monkeypatch.setattr(main, "should_exclude_by_deadline", lambda _: False)
+
+    calls: list[int] = []
+
+    def fake_analyze_job(job: job_collector.Job) -> AnalysisResult:
+        calls.append(job.id)
+        return AnalysisResult.from_dict(
+            {
+                "reward_score": 3,
+                "competition_score": 3,
+                "ai_score": 3,
+                "continuity_score": 3,
+                "quality_score": 3,
+                "total_score": 75,
+                "recommendation_reasons": [],
+                "concerns": [],
+                "application_strategy": [],
+                "overall_comment": "ok",
+            }
+        )
+
+    monkeypatch.setattr(main, "analyze_job", fake_analyze_job)
+
+    output = io.StringIO()
+    with redirect_stdout(output):
+        exit_code = main.main(
+            [
+                "--collect-jobs",
+                "--analyze",
+                "--url",
+                "https://example.com/public/jobs/group/ai_bpo",
+                "--limit",
+                "5",
+            ]
+        )
+
+    assert exit_code == 0
+    assert calls == [1]
+    assert (output_dir / "jobs.json").exists()
+    assert (output_dir / "analysis_results.json").exists()
+    assert "Collected 1 jobs." in output.getvalue()
+    assert "Analyzed 1 jobs." in output.getvalue()

@@ -1,6 +1,6 @@
 import json
 from pathlib import Path
-from models import Client, Job
+from models import Client, Job, JobMetadata, JobSourceMetadata
 
 
 def load_jobs_from_json(file_path: str | Path) -> list[Job]:
@@ -33,6 +33,31 @@ def load_jobs_from_json(file_path: str | Path) -> list[Job]:
                 profile_description=client_data.get("profile_description"),
             )
 
+        metadata_data = item.get("metadata")
+        metadata = None
+        if isinstance(metadata_data, dict):
+            sources_data = metadata_data.get("sources")
+            sources: list[JobSourceMetadata] = []
+            if isinstance(sources_data, list):
+                for source in sources_data:
+                    if not isinstance(source, dict):
+                        continue
+                    sources.append(
+                        JobSourceMetadata(
+                            url=source["url"],
+                            first_seen_at=source["first_seen_at"],
+                            last_seen_at=source["last_seen_at"],
+                            seen_count=source.get("seen_count", 1),
+                        )
+                    )
+
+            metadata = JobMetadata(
+                first_seen_at=metadata_data.get("first_seen_at"),
+                last_seen_at=metadata_data.get("last_seen_at"),
+                updated_at=metadata_data.get("updated_at"),
+                sources=sources,
+            )
+
         jobs.append(
             Job(
                 id=item["id"],
@@ -51,6 +76,7 @@ def load_jobs_from_json(file_path: str | Path) -> list[Job]:
                 recruitment_count=item.get("recruitment_count"),
                 favorite_count=item.get("favorite_count"),
                 client=client,
+                metadata=metadata,
             )
         )
 

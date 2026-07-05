@@ -7,6 +7,7 @@ CW_JOB_DETAIL_URL = f"{CW_BASE_URL}/public/jobs"
 OUTPUT_DIR = "output"
 
 OUTPUT_JOBS_FILENAME = "jobs.json"
+OUTPUT_JOBS_FOR_AI_FILENAME = "jobs_for_ai.jsonl"
 OUTPUT_ANALYSIS_RESULTS_FILENAME = "analysis_results.json"
 OUTPUT_RANKED_JOBS_FILENAME = "ranked_jobs.json"
 OUTPUT_RANKED_REPORT_FILENAME = "ranked_jobs_report.md"

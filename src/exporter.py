@@ -91,6 +91,38 @@ def export_jobs_to_json(jobs: Sequence[Job], file_path: str | Path) -> None:
     _write_json_file(_jobs_to_dicts(jobs), file_path)
 
 
+def export_jobs_for_ai_jsonl(jobs: list[Job], file_path: str | Path) -> None:
+    """AI 入力用に Job 配列を JSON Lines 形式で保存します。"""
+    path = Path(file_path)
+    path.parent.mkdir(parents=True, exist_ok=True)
+
+    keys = [
+        "id",
+        "title",
+        "url",
+        "category",
+        "sub_category",
+        "description",
+        "reward",
+        "application_deadline",
+        "published_at",
+        "delivery_deadline",
+        "is_remote",
+        "application_count",
+        "contract_count",
+        "recruitment_count",
+        "favorite_count",
+        "client",
+        "metadata",
+    ]
+
+    with path.open("w", encoding="utf-8") as f:
+        for job in jobs:
+            job_dict = asdict(job)
+            record = {key: job_dict.get(key) for key in keys}
+            f.write(json.dumps(record, ensure_ascii=False) + "\n")
+
+
 def export_job_analysis_results(items: list[dict], output_path: str | Path) -> None:
     """job/analysis のペアを UTF-8 形式の JSON ファイルとして保存します。"""
     _write_json_file(items, output_path)

@@ -9,11 +9,18 @@ from exporter import (
     build_raw_jobs_filename,
     build_job_analysis_item,
     export_job_analysis_results,
+    export_jobs_for_ai_jsonl,
     export_jobs_to_json,
     save_jobs_snapshot,
     save_raw_jobs,
 )
-from models import AnalysisResult, Client, Job
+from models import (
+    AnalysisResult,
+    Client,
+    Job,
+    JobMetadata,
+    JobSourceMetadata,
+)
 
 
 def test_build_job_analysis_item_creates_expected_dict() -> None:
@@ -254,3 +261,68 @@ def test_save_jobs_snapshot_creates_file_and_returns_path(tmp_path: Path) -> Non
     assert written[0]["id"] == 1
     assert written[0]["title"] == "案件タイトル"
     assert written[0]["url"] == "https://example.com/jobs/1"
+
+
+def test_export_jobs_for_ai_jsonl_writes_single_job_as_one_line(tmp_path: Path) -> None:
+    jobs = [
+        Job(
+            id=1,
+            title="案件A",
+            url="https://example.com/jobs/1",
+        )
+    ]
+
+    output_path = tmp_path / "nested" / "ai" / "jobs.jsonl"
+    export_jobs_for_ai_jsonl(jobs, output_path)
+
+    assert output_path.exists()
+    lines = output_path.read_text(encoding="utf-8").splitlines()
+    assert len(lines) == 1
+
+    row = json.loads(lines[0])
+    assert row["id"] == 1
+    assert row["title"] == "案件A"
+    assert row["metadata"] is None
+
+
+def test_export_jobs_for_ai_jsonl_writes_multiple_lines_with_utf8_and_metadata(
+    tmp_path: Path,
+) -> None:
+    jobs = [
+        Job(
+            id=1,
+            title="日本語タイトル",
+            url="https://example.com/jobs/1",
+            metadata=JobMetadata(
+                first_seen_at="2026-07-05T10:00:00+09:00",
+                last_seen_at="2026-07-05T10:00:00+09:00",
+                updated_at="2026-07-05T10:00:00+09:00",
+                sources=[
+                    JobSourceMetadata(
+                        url="https://crowdworks.jp/public/jobs/group/ai_bpo",
+                        first_seen_at="2026-07-05T10:00:00+09:00",
+                        last_seen_at="2026-07-05T10:00:00+09:00",
+                        seen_count=1,
+                    )
+                ],
+            ),
+        ),
+        Job(
+            id=2,
+            title="案件B",
+            url="https://example.com/jobs/2",
+        ),
+    ]
+
+    output_path = tmp_path / "jobs_ai.jsonl"
+    export_jobs_for_ai_jsonl(jobs, output_path)
+
+    text = output_path.read_text(encoding="utf-8")
+    lines = text.splitlines()
+    assert len(lines) == 2
+    assert "日本語タイトル" in text
+    assert "\\u65e5\\u672c" not in text
+
+    first = json.loads(lines[0])
+    assert first["metadata"] is not None
+    assert first["metadata"]["sources"][0]["seen_count"] == 1

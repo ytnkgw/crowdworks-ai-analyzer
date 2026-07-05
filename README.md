@@ -188,14 +188,14 @@ python3 src/main.py --rank --display-ranking --export-report --limit 5
 
 | ファイル | 役割 |
 | --- | --- |
-| `output/jobs.json` | 継続更新される案件データ本体 |
-| `output/raw/jobs_YYYYMMDD_{category}_{page:02d}.json` | URL取得ごとのraw案件データ |
-| `output/snapshots/jobs_YYYYMMDD_HHMMSS.json` | 更新時点の `jobs.json` のスナップショット |
-| `output/jobs_for_ai.jsonl` | ChatGPTやClaudeなどに渡しやすいJSON Lines形式の案件データ |
+| `output/jobs.json` | 収集した案件情報を保存するためのJSONファイルです。同じ案件を重複して保存せず、継続的に更新するためのデータ本体として利用します。 |
+| `output/jobs_for_ai.jsonl` | AIエージェントに読み込ませやすいように、jobs.jsonをJSON Line形式で出力したファイルです。 |
 | `output/update_summary.json` | 最新更新時の件数・出力ファイルパスなどのサマリー |
 | `output/analysis_results.json` | OpenAI APIによる案件分析結果 |
 | `output/ranked_jobs.json` | 分析結果をスコア順に並べたランキング |
 | `output/ranked_jobs_report.md` | ランキング結果のMarkdownレポート |
+| `output/raw/jobs_YYYYMMDD_{category}_{page:02d}.json` | URL取得ごとのraw案件データ |
+| `output/snapshots/jobs_YYYYMMDD_HHMMSS.json` | 更新時点の `jobs.json` のスナップショット |
 
 公開用サンプルとして、匿名化済みのサンプル出力を以下に配置しています。
 
@@ -210,35 +210,49 @@ sample_outputs/sample_report.md
 
 ## 出力サンプル
 
-### analysis_results.json
+### jobs_for_ai.jsonl
+
+```json
+{"id":12345678,"title":"業務自動化ツール開発のサンプル案件","url":"https://crowdworks.jp/public/jobs/12345678","category":"システム開発","sub_category":"業務システム・ツール開発","description":"Googleスプレッドシートを使った業務管理を効率化するため、データ入力や集計作業を自動化するツールを開発する案件です。","reward":"固定報酬制 : 50,000円 〜 100,000円","application_deadline":"2026年07月31日","is_remote":true,"application_count":5,"contract_count":0,"recruitment_count":1,"favorite_count":12,"client":{"name":"sample_client","rating":4.8,"identity_verified":true},"metadata":{"first_seen_at":"2026-07-05T23:21:43+09:00","last_seen_at":"2026-07-05T23:21:43+09:00","updated_at":"2026-07-05T23:21:43+09:00","sources":[{"url":"https://crowdworks.jp/public/jobs/search?...","first_seen_at":"2026-07-05T23:21:43+09:00","last_seen_at":"2026-07-05T23:21:43+09:00","seen_count":1}]}}
+```
+
+### jobs.json
 
 ```json
 [
   {
-    "job": {
-      "id": 12345678,
-      "title": "業務自動化ツール開発のサンプル案件",
-      "url": "https://crowdworks.jp/public/jobs/12345678"
+    "id": 12345678,
+    "title": "業務自動化ツール開発のサンプル案件",
+    "url": "https://crowdworks.jp/public/jobs/12345678",
+    "category": "システム開発",
+    "sub_category": "業務システム・ツール開発",
+    "description": "Googleスプレッドシートを使った業務管理を効率化するため、データ入力や集計作業を自動化するツールを開発する案件です。",
+    "reward": "固定報酬制 : 50,000円 〜 100,000円",
+    "application_deadline": "2026年07月31日",
+    "published_at": "2026年07月01日",
+    "delivery_deadline": null,
+    "is_remote": true,
+    "application_count": 5,
+    "contract_count": 0,
+    "recruitment_count": 1,
+    "favorite_count": 12,
+    "client": {
+      "name": "sample_client",
+      "rating": 4.8,
+      "identity_verified": true
     },
-    "analysis": {
-      "reward_score": 4,
-      "competition_score": 3,
-      "ai_score": 5,
-      "continuity_score": 4,
-      "quality_score": 5,
-      "total_score": 91,
-      "recommendation_reasons": [
-        "Pythonによるデータ処理経験を活かしやすい",
-        "AI活用・業務改善の実績として展開しやすい"
-      ],
-      "concerns": [
-        "応募人数が多く、提案文で差別化が必要"
-      ],
-      "application_strategy": [
-        "類似ツールの開発経験を具体的に説明する",
-        "作業範囲と納品物を明確に確認する"
-      ],
-      "overall_comment": "AI活用・業務自動化の案件として相性がよく、優先的に応募を検討できる案件です。"
+    "metadata": {
+      "first_seen_at": "2026-07-05T23:21:43+09:00",
+      "last_seen_at": "2026-07-05T23:21:43+09:00",
+      "updated_at": "2026-07-05T23:21:43+09:00",
+      "sources": [
+        {
+          "url": "https://crowdworks.jp/public/jobs/search?...",
+          "first_seen_at": "2026-07-05T23:21:43+09:00",
+          "last_seen_at": "2026-07-05T23:21:43+09:00",
+          "seen_count": 1
+        }
+      ]
     }
   }
 ]

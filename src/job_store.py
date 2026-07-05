@@ -39,8 +39,10 @@ def has_meaningful_changes(existing_job: Job, new_job: Job) -> bool:
 
 
 def initialize_job_metadata(job: Job, source_url: str, now: str) -> Job:
-    if job.metadata is None:
-        job.metadata = JobMetadata()
+    if job.metadata is not None:
+        return job
+
+    job.metadata = JobMetadata()
 
     job.metadata.first_seen_at = now
     job.metadata.last_seen_at = now
@@ -106,3 +108,26 @@ def update_job_if_changed(existing_job: Job, new_job: Job, now: str) -> Job:
         existing_job.metadata.updated_at = now
 
     return existing_job
+
+
+def merge_jobs(
+    existing_jobs: list[Job],
+    collected_jobs: list[Job],
+    source_url: str,
+    now: str,
+) -> list[Job]:
+    merged_jobs = list(existing_jobs)
+    existing_index = build_job_index(existing_jobs)
+
+    for collected_job in collected_jobs:
+        existing_job = existing_index.get(collected_job.id)
+        if existing_job is None:
+            initialize_job_metadata(collected_job, source_url, now)
+            merged_jobs.append(collected_job)
+            existing_index[collected_job.id] = collected_job
+            continue
+
+        update_seen_metadata(existing_job, source_url, now)
+        update_job_if_changed(existing_job, collected_job, now)
+
+    return merged_jobs

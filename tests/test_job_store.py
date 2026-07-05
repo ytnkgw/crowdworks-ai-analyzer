@@ -9,6 +9,7 @@ from job_store import (
     build_job_index,
     has_meaningful_changes,
     initialize_job_metadata,
+    merge_jobs,
     update_job_if_changed,
     update_seen_metadata,
 )
@@ -161,6 +162,40 @@ def test_initialize_job_metadata_sets_metadata_on_job_without_metadata() -> None
     assert updated.metadata.sources[0].first_seen_at == now
     assert updated.metadata.sources[0].last_seen_at == now
     assert updated.metadata.sources[0].seen_count == 1
+
+
+def test_initialize_job_metadata_does_nothing_when_metadata_already_exists() -> None:
+    now = "2026-07-05T12:34:56Z"
+    source_url = "https://crowdworks.jp/public/jobs/search?..."
+    existing_source = JobSourceMetadata(
+        url="https://crowdworks.jp/public/jobs/search?keyword=ai",
+        first_seen_at="2026-07-01T00:00:00Z",
+        last_seen_at="2026-07-02T00:00:00Z",
+        seen_count=2,
+    )
+    job = Job(
+        id=101,
+        title="既存metadata案件",
+        url="https://example.com/jobs/101",
+        metadata=JobMetadata(
+            first_seen_at="2026-07-01T00:00:00Z",
+            last_seen_at="2026-07-02T00:00:00Z",
+            updated_at="2026-07-03T00:00:00Z",
+            sources=[existing_source],
+        ),
+    )
+
+    previous_metadata = job.metadata
+    updated = initialize_job_metadata(job, source_url, now)
+
+    assert updated is job
+    assert updated.metadata is previous_metadata
+    assert updated.metadata is not None
+    assert updated.metadata.first_seen_at == "2026-07-01T00:00:00Z"
+    assert updated.metadata.last_seen_at == "2026-07-02T00:00:00Z"
+    assert updated.metadata.updated_at == "2026-07-03T00:00:00Z"
+    assert len(updated.metadata.sources) == 1
+    assert updated.metadata.sources[0] is existing_source
 
 
 def _build_job_with_metadata() -> Job:
@@ -446,3 +481,109 @@ def test_update_job_if_changed_keeps_metadata_sources_when_changed() -> None:
 
     assert updated.metadata is not None
     assert updated.metadata.sources is previous_sources
+
+
+def test_merge_jobs_adds_collected_jobs_when_existing_is_empty() -> None:
+    now = "2026-07-07T00:00:00Z"
+    source_url = "https://crowdworks.jp/public/jobs/search?keyword=ai"
+    collected_jobs = [
+        Job(id=1, title="新規1", url="https://example.com/jobs/1"),
+        Job(id=2, title="新規2", url="https://example.com/jobs/2"),
+    ]
+
+    merged = merge_jobs([], collected_jobs, source_url, now)
+
+    assert [job.id for job in merged] == [1, 2]
+
+
+def test_merge_jobs_initializes_metadata_for_new_job() -> None:
+    now = "2026-07-07T00:00:00Z"
+    source_url = "https://crowdworks.jp/public/jobs/search?keyword=ai"
+    collected_job = Job(id=3, title="新規3", url="https://example.com/jobs/3")
+
+    merged = merge_jobs([], [collected_job], source_url, now)
+
+    assert merged[0].metadata is not None
+    assert merged[0].metadata.first_seen_at == now
+    assert merged[0].metadata.last_seen_at == now
+    assert merged[0].metadata.updated_at == now
+    assert len(merged[0].metadata.sources) == 1
+    assert merged[0].metadata.sources[0].url == source_url
+
+
+def test_merge_jobs_does_not_duplicate_when_id_already_exists() -> None:
+    now = "2026-07-07T00:00:00Z"
+    source_url = "https://crowdworks.jp/public/jobs/search?keyword=ai"
+    existing_job = _build_job_with_metadata()
+    existing_job.id = 10
+    collected_job = Job(id=10, title="既存案件", url="https://example.com/jobs/200")
+
+    merged = merge_jobs([existing_job], [collected_job], source_url, now)
+
+    assert len(merged) == 1
+    assert merged[0] is existing_job
+
+
+def test_merge_jobs_updates_last_seen_and_seen_count_for_existing_job() -> None:
+    now = "2026-07-07T01:00:00Z"
+    source_url = "https://crowdworks.jp/public/jobs/search?keyword=ai"
+    existing_job = _build_job_with_metadata()
+    existing_job.id = 11
+    previous_seen_count = existing_job.metadata.sources[0].seen_count
+    collected_job = Job(id=11, title="既存案件", url="https://example.com/jobs/200")
+
+    merged = merge_jobs([existing_job], [collected_job], source_url, now)
+
+    assert merged[0].metadata is not None
+    assert merged[0].metadata.last_seen_at == now
+    assert merged[0].metadata.sources[0].seen_count == previous_seen_count + 1
+
+
+def test_merge_jobs_updates_existing_job_body_and_updated_at_when_changed() -> None:
+    now = "2026-07-07T02:00:00Z"
+    source_url = "https://crowdworks.jp/public/jobs/search?keyword=ai"
+    existing_job = _build_existing_job_for_update_test()
+    collected_job = _build_new_job_for_update_test()
+    collected_job.title = "変更後タイトル"
+    collected_job.reward = "5000円"
+
+    merged = merge_jobs([existing_job], [collected_job], source_url, now)
+
+    assert merged[0].title == "変更後タイトル"
+    assert merged[0].reward == "5000円"
+    assert merged[0].metadata is not None
+    assert merged[0].metadata.updated_at == now
+
+
+def test_merge_jobs_keeps_uncollected_existing_jobs() -> None:
+    now = "2026-07-07T03:00:00Z"
+    source_url = "https://crowdworks.jp/public/jobs/search?keyword=ai"
+    existing1 = _build_existing_job_for_update_test()
+    existing1.id = 20
+    existing2 = _build_existing_job_for_update_test()
+    existing2.id = 21
+    collected_jobs = [
+        Job(id=20, title="既存タイトル", url="https://example.com/jobs/400")
+    ]
+
+    merged = merge_jobs([existing1, existing2], collected_jobs, source_url, now)
+
+    assert [job.id for job in merged] == [20, 21]
+
+
+def test_merge_jobs_preserves_existing_order_and_appends_new_jobs_to_end() -> None:
+    now = "2026-07-07T04:00:00Z"
+    source_url = "https://crowdworks.jp/public/jobs/search?keyword=ai"
+    existing1 = _build_existing_job_for_update_test()
+    existing1.id = 30
+    existing2 = _build_existing_job_for_update_test()
+    existing2.id = 31
+    collected_jobs = [
+        Job(id=31, title="既存タイトル", url="https://example.com/jobs/400"),
+        Job(id=32, title="新規32", url="https://example.com/jobs/32"),
+        Job(id=33, title="新規33", url="https://example.com/jobs/33"),
+    ]
+
+    merged = merge_jobs([existing1, existing2], collected_jobs, source_url, now)
+
+    assert [job.id for job in merged] == [30, 31, 32, 33]

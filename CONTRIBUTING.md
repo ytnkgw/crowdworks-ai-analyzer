@@ -178,7 +178,21 @@ Pull Requestでは以下を確認する。
 
 ---
 
-# 8. Definition of Done
+# 8. 使用技術
+
+* Python
+* OpenAI API
+* BeautifulSoup
+* Requests
+* JSON
+* Markdown
+* argparse
+* pytest
+* Git / GitHub
+
+---
+
+# 9. Issue完了条件
 
 以下を満たした場合に、そのIssueは完了とする。
 
@@ -190,7 +204,7 @@ Pull Requestでは以下を確認する。
 
 ---
 
-# 9. 開発時の考え方
+# 10. 開発時の考え方
 
 実装速度よりも、継続して改善できる設計を優先する。
 

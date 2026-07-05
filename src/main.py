@@ -148,13 +148,12 @@ def _fill_application_deadline_from_jobs_json(
 def _run_collect_pipeline(args: argparse.Namespace, output_dir: Path) -> None:
     now = datetime.now(_JST).isoformat()
     jobs_path = output_dir / config.OUTPUT_JOBS_FILENAME
-    existing_jobs = load_jobs_from_json(jobs_path) if jobs_path.exists() else []
 
+    existing_jobs = load_jobs_from_json(jobs_path) if jobs_path.exists() else []
     collected_jobs = collect_jobs_from_url(args.url, limit=args.limit)
     updated_jobs = update_job_store(existing_jobs, collected_jobs, args.url, now)
 
     raw_output_path = save_raw_jobs(collected_jobs, args.url, output_dir=output_dir)
-    jobs_path = output_dir / config.OUTPUT_JOBS_FILENAME
     export_jobs_to_json(updated_jobs, jobs_path)
 
     print(f"Saved raw jobs: {raw_output_path}")

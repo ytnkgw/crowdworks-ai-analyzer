@@ -135,6 +135,9 @@ python3 src/main.py --collect-jobs --url "https://crowdworks.jp/public/jobs/sear
 ```text
 output/jobs.json
 output/raw/jobs_YYYYMMDD_{category}_{page:02d}.json
+output/snapshots/jobs_YYYYMMDD_HHMMSS.json
+output/jobs_for_ai.jsonl
+output/update_summary.json
 ```
 
 ### 収集済み案件をAI分析
@@ -193,15 +196,18 @@ python3 src/main.py --rank --display-ranking --export-report --limit 5
 
 ## 出力ファイル
 
-主な出力ファイルは以下です。
+各ファイルの役割は以下です。
 
-```text
-output/jobs.json
-output/raw/jobs_YYYYMMDD_{category}_{page:02d}.json
-output/analysis_results.json
-output/ranked_jobs.json
-output/ranked_jobs_report.md
-```
+| ファイル | 役割 |
+| --- | --- |
+| `output/jobs.json` | 継続更新される案件データ本体 |
+| `output/raw/jobs_YYYYMMDD_{category}_{page:02d}.json` | URL取得ごとのraw案件データ |
+| `output/snapshots/jobs_YYYYMMDD_HHMMSS.json` | 更新時点の `jobs.json` のスナップショット |
+| `output/jobs_for_ai.jsonl` | ChatGPTやClaudeなどに渡しやすいJSON Lines形式の案件データ |
+| `output/update_summary.json` | 最新更新時の件数・出力ファイルパスなどのサマリー |
+| `output/analysis_results.json` | OpenAI APIによる案件分析結果 |
+| `output/ranked_jobs.json` | 分析結果をスコア順に並べたランキング |
+| `output/ranked_jobs_report.md` | ランキング結果のMarkdownレポート |
 
 公開用サンプルとして、匿名化済みのサンプル出力を以下に配置しています。
 

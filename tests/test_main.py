@@ -5,7 +5,7 @@ from pathlib import Path
 sys.path.append(str(Path(__file__).resolve().parents[1] / "src"))
 
 import config
-from main import load_jobs_from_json
+from importer import load_jobs_from_json
 from models import Job
 
 

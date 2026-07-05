@@ -6,6 +6,7 @@ from pathlib import Path
 from zoneinfo import ZoneInfo
 from exporter import (
     save_raw_jobs,
+    save_jobs_snapshot,
     build_job_analysis_item,
     export_job_analysis_results,
     export_jobs_to_json,
@@ -155,9 +156,11 @@ def _run_collect_pipeline(args: argparse.Namespace, output_dir: Path) -> None:
 
     raw_output_path = save_raw_jobs(collected_jobs, args.url, output_dir=output_dir)
     export_jobs_to_json(updated_jobs, jobs_path)
+    snapshot_path = save_jobs_snapshot(updated_jobs, output_dir, now)
 
     print(f"Saved raw jobs: {raw_output_path}")
     print(f"Saved pipeline jobs: {jobs_path}")
+    print(f"Saved snapshot: {snapshot_path}")
     print(f"Collected {len(collected_jobs)} jobs.")
     print(f"Saved {len(updated_jobs)} jobs after update.")
 

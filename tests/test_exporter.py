@@ -10,6 +10,7 @@ from exporter import (
     build_job_analysis_item,
     export_job_analysis_results,
     export_jobs_to_json,
+    save_jobs_snapshot,
     save_raw_jobs,
 )
 from models import AnalysisResult, Client, Job
@@ -231,3 +232,25 @@ def test_save_raw_jobs_writes_page_scoped_json(tmp_path: Path) -> None:
     written = json.loads(saved_path.read_text(encoding="utf-8"))
     assert written[0]["id"] == 1
     assert written[0]["title"] == "案件タイトル"
+
+
+def test_save_jobs_snapshot_creates_file_and_returns_path(tmp_path: Path) -> None:
+    jobs = [
+        Job(
+            id=1,
+            title="案件タイトル",
+            url="https://example.com/jobs/1",
+        )
+    ]
+
+    output_dir = tmp_path / "output"
+    saved_path = save_jobs_snapshot(jobs, output_dir, "2026-07-05T13:14:15+09:00")
+
+    assert saved_path == output_dir / "snapshots" / "jobs_20260705_131415.json"
+    assert saved_path.exists()
+    assert (output_dir / "snapshots").is_dir()
+
+    written = json.loads(saved_path.read_text(encoding="utf-8"))
+    assert written[0]["id"] == 1
+    assert written[0]["title"] == "案件タイトル"
+    assert written[0]["url"] == "https://example.com/jobs/1"

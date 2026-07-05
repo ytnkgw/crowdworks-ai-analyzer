@@ -58,6 +58,22 @@ def save_raw_jobs(
     return file_path
 
 
+def save_jobs_snapshot(jobs: list[Job], output_dir: Path, now: str) -> Path:
+    """案件データのスナップショットを output/snapshots 配下へ保存します。"""
+    try:
+        dt = datetime.fromisoformat(now.replace("Z", "+00:00"))
+        timestamp = dt.strftime("%Y%m%d_%H%M%S")
+    except ValueError:
+        digits = "".join(ch for ch in now if ch.isdigit())
+        if len(digits) < 14:
+            raise ValueError(f"Invalid ISO datetime string: {now}")
+        timestamp = f"{digits[:8]}_{digits[8:14]}"
+
+    file_path = output_dir / "snapshots" / f"jobs_{timestamp}.json"
+    export_jobs_to_json(jobs, file_path)
+    return file_path
+
+
 def build_job_analysis_item(job: Job, analysis: AnalysisResult) -> dict:
     """Job と AnalysisResult から job/analysis 形式の dict を作成します。"""
     return {

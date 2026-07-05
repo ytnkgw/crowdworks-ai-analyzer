@@ -1,7 +1,9 @@
 import argparse
 import json
 import config
+from datetime import datetime
 from pathlib import Path
+from zoneinfo import ZoneInfo
 from exporter import (
     save_raw_jobs,
     build_job_analysis_item,
@@ -9,7 +11,7 @@ from exporter import (
     export_jobs_to_json,
     export_ranked_job_analysis_results,
 )
-from job_filter import should_exclude_by_deadline, filter_expired_jobs
+from job_filter import filter_expired_jobs
 from fetcher import fetch_html
 from models import Job
 from openai_client import analyze_job
@@ -20,6 +22,9 @@ from ranking_display import format_ranked_jobs
 from report_exporter import export_ranked_jobs_report
 from job_collector import collect_jobs_from_url
 from importer import load_jobs_from_json
+from job_store import remove_expired_jobs, update_job_store
+
+_JST = ZoneInfo("Asia/Tokyo")
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -88,19 +93,6 @@ def load_json(path: str | Path) -> list[dict]:
         return json.load(f)
 
 
-def _filter_jobs_by_deadline(jobs: list[Job]) -> tuple[list[Job], int]:
-    filtered: list[Job] = []
-    skipped = 0
-
-    for job in jobs:
-        if should_exclude_by_deadline(job.application_deadline):
-            skipped += 1
-            continue
-        filtered.append(job)
-
-    return filtered, skipped
-
-
 def _fill_application_deadline_from_jobs_json(
     output_dir: Path,
     analysis_items: list[dict],
@@ -154,17 +146,21 @@ def _fill_application_deadline_from_jobs_json(
 
 
 def _run_collect_pipeline(args: argparse.Namespace, output_dir: Path) -> None:
-    jobs = collect_jobs_from_url(args.url, limit=args.limit)
-    filtered_jobs, skipped_count = _filter_jobs_by_deadline(jobs)
-
-    raw_output_path = save_raw_jobs(filtered_jobs, args.url, output_dir=output_dir)
+    now = datetime.now(_JST).isoformat()
     jobs_path = output_dir / config.OUTPUT_JOBS_FILENAME
-    export_jobs_to_json(filtered_jobs, jobs_path)
+    existing_jobs = load_jobs_from_json(jobs_path) if jobs_path.exists() else []
+
+    collected_jobs = collect_jobs_from_url(args.url, limit=args.limit)
+    updated_jobs = update_job_store(existing_jobs, collected_jobs, args.url, now)
+
+    raw_output_path = save_raw_jobs(collected_jobs, args.url, output_dir=output_dir)
+    jobs_path = output_dir / config.OUTPUT_JOBS_FILENAME
+    export_jobs_to_json(updated_jobs, jobs_path)
+
     print(f"Saved raw jobs: {raw_output_path}")
     print(f"Saved pipeline jobs: {jobs_path}")
-    if skipped_count > 0:
-        print(f"Skipped expired jobs: {skipped_count}")
-    print(f"Collected {len(filtered_jobs)} jobs.")
+    print(f"Collected {len(collected_jobs)} jobs.")
+    print(f"Saved {len(updated_jobs)} jobs after update.")
 
 
 def _run_analyze_pipeline(args: argparse.Namespace, output_dir: Path) -> bool:
@@ -176,7 +172,8 @@ def _run_analyze_pipeline(args: argparse.Namespace, output_dir: Path) -> bool:
         print("Run with --collect-jobs first.")
         return False
 
-    filtered_jobs, skipped_count = _filter_jobs_by_deadline(jobs)
+    filtered_jobs = remove_expired_jobs(jobs)
+    skipped_count = len(jobs) - len(filtered_jobs)
     target_jobs = filtered_jobs[: args.limit]
 
     export_results = []

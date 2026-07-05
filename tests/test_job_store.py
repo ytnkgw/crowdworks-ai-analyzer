@@ -255,6 +255,7 @@ def test_update_seen_metadata_does_not_update_metadata_updated_at() -> None:
     now = "2026-07-05T13:00:00Z"
     source_url = "https://crowdworks.jp/public/jobs/search?keyword=ai"
     job = _build_job_with_metadata()
+    assert job.metadata is not None
     previous_updated_at = job.metadata.updated_at
 
     updated = update_seen_metadata(job, source_url, now)
@@ -289,6 +290,7 @@ def test_update_seen_metadata_keeps_existing_source_first_seen_at() -> None:
     now = "2026-07-05T13:00:00Z"
     source_url = "https://crowdworks.jp/public/jobs/search?keyword=ai"
     job = _build_job_with_metadata()
+    assert job.metadata is not None
     previous_first_seen_at = job.metadata.sources[0].first_seen_at
 
     updated = update_seen_metadata(job, source_url, now)
@@ -383,6 +385,7 @@ def test_update_job_if_changed_does_not_update_updated_at_without_changes() -> N
     now = "2026-07-06T00:00:00Z"
     existing_job = _build_existing_job_for_update_test()
     new_job = _build_new_job_for_update_test()
+    assert existing_job.metadata is not None
     previous_updated_at = existing_job.metadata.updated_at
 
     updated = update_job_if_changed(existing_job, new_job, now)
@@ -452,6 +455,7 @@ def test_update_job_if_changed_keeps_metadata_first_seen_at_when_changed() -> No
     existing_job = _build_existing_job_for_update_test()
     new_job = _build_new_job_for_update_test()
     new_job.title = "更新タイトル"
+    assert existing_job.metadata is not None
     previous_first_seen_at = existing_job.metadata.first_seen_at
 
     updated = update_job_if_changed(existing_job, new_job, now)
@@ -465,6 +469,7 @@ def test_update_job_if_changed_keeps_metadata_last_seen_at_when_changed() -> Non
     existing_job = _build_existing_job_for_update_test()
     new_job = _build_new_job_for_update_test()
     new_job.title = "更新タイトル"
+    assert existing_job.metadata is not None
     previous_last_seen_at = existing_job.metadata.last_seen_at
 
     updated = update_job_if_changed(existing_job, new_job, now)
@@ -478,6 +483,7 @@ def test_update_job_if_changed_keeps_metadata_sources_when_changed() -> None:
     existing_job = _build_existing_job_for_update_test()
     new_job = _build_new_job_for_update_test()
     new_job.title = "更新タイトル"
+    assert existing_job.metadata is not None
     previous_sources = existing_job.metadata.sources
 
     updated = update_job_if_changed(existing_job, new_job, now)
@@ -532,6 +538,7 @@ def test_merge_jobs_updates_last_seen_and_seen_count_for_existing_job() -> None:
     source_url = "https://crowdworks.jp/public/jobs/search?keyword=ai"
     existing_job = _build_job_with_metadata()
     existing_job.id = 11
+    assert existing_job.metadata is not None
     previous_seen_count = existing_job.metadata.sources[0].seen_count
     collected_job = Job(id=11, title="既存案件", url="https://example.com/jobs/200")
 

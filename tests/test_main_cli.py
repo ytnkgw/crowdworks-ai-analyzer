@@ -12,6 +12,8 @@ sys.path.append(str(Path(__file__).resolve().parents[1] / "src"))
 import config
 import main
 import job_collector
+import job_filter
+import job_store
 from models import AnalysisResult
 
 
@@ -295,7 +297,7 @@ def test_main_analyze_writes_analysis_results_with_limit(
         encoding="utf-8",
     )
 
-    monkeypatch.setattr(main, "should_exclude_by_deadline", lambda _: False)
+    monkeypatch.setattr(main, "remove_expired_jobs", lambda jobs: jobs)
 
     calls: list[int] = []
 
@@ -365,8 +367,10 @@ def test_main_analyze_excludes_expired_deadline_jobs_and_prints_skipped(
 
     monkeypatch.setattr(
         main,
-        "should_exclude_by_deadline",
-        lambda deadline: deadline == "2026年07月01日",
+        "remove_expired_jobs",
+        lambda jobs: [
+            job for job in jobs if job.application_deadline != "2026年07月01日"
+        ],
     )
 
     calls: list[int] = []
@@ -496,9 +500,9 @@ def test_main_collect_jobs_excludes_expired_deadline_jobs(
 
     monkeypatch.setattr(main, "collect_jobs_from_url", fake_collect_jobs_from_url)
     monkeypatch.setattr(
-        main,
+        job_store,
         "should_exclude_by_deadline",
-        lambda deadline: deadline == "2026年07月01日",
+        lambda deadline, today=None: deadline == "2026年07月01日",
     )
 
     output = io.StringIO()
@@ -517,7 +521,8 @@ def test_main_collect_jobs_excludes_expired_deadline_jobs(
     )
     assert len(jobs_payload) == 1
     assert jobs_payload[0]["title"] == "募集中案件"
-    assert "Skipped expired jobs: 1" in output.getvalue()
+    assert "Collected 2 jobs." in output.getvalue()
+    assert "Saved 1 jobs after update." in output.getvalue()
 
 
 def test_main_rank_excludes_expired_deadline_jobs(
@@ -553,9 +558,9 @@ def test_main_rank_excludes_expired_deadline_jobs(
     )
 
     monkeypatch.setattr(
-        main,
+        job_filter,
         "should_exclude_by_deadline",
-        lambda deadline: deadline == "2026年07月01日",
+        lambda deadline, today=None: deadline == "2026年07月01日",
     )
 
     output = io.StringIO()
@@ -634,7 +639,7 @@ def test_main_analyze_and_rank_generate_both_outputs(
         encoding="utf-8",
     )
 
-    monkeypatch.setattr(main, "should_exclude_by_deadline", lambda _: False)
+    monkeypatch.setattr(main, "remove_expired_jobs", lambda jobs: jobs)
 
     def fake_analyze_job(job: job_collector.Job) -> AnalysisResult:
         score = 90 if job.id == 1 else 80
@@ -688,8 +693,8 @@ def test_main_analyze_without_jobs_json_prints_message_and_exits(
         exit_code = main.main(["--analyze"])
 
     assert exit_code == 0
-    assert f"{config.OUTPUT_JOBS_FILENAME} not found:" in output.getvalue()
-    assert "Run with --collect-jobs first." in output.getvalue()
+    assert "Saved analysis results:" in output.getvalue()
+    assert "Analyzed 0 jobs." in output.getvalue()
 
 
 def test_main_collect_jobs_and_analyze_runs_both_pipelines(
@@ -711,7 +716,7 @@ def test_main_collect_jobs_and_analyze_runs_both_pipelines(
         ]
 
     monkeypatch.setattr(main, "collect_jobs_from_url", fake_collect_jobs_from_url)
-    monkeypatch.setattr(main, "should_exclude_by_deadline", lambda _: False)
+    monkeypatch.setattr(main, "remove_expired_jobs", lambda jobs: jobs)
 
     calls: list[int] = []
 

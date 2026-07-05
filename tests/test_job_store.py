@@ -14,6 +14,7 @@ from job_store import (
     remove_expired_jobs,
     update_job_if_changed,
     update_job_store,
+    update_job_store_with_summary,
     update_seen_metadata,
 )
 from models import Client, Job, JobMetadata, JobSourceMetadata
@@ -761,3 +762,99 @@ def test_update_job_store_keeps_uncollected_existing_job_if_not_expired() -> Non
     )
 
     assert [job.id for job in updated] == [60, 61]
+
+
+def test_merge_jobs_returns_added_count() -> None:
+    now = "2026-07-09T00:00:00Z"
+    source_url = "https://crowdworks.jp/public/jobs/search?keyword=ai"
+    existing_job = Job(id=70, title="既存案件", url="https://example.com/jobs/70")
+    collected_new_1 = Job(id=71, title="新規1", url="https://example.com/jobs/71")
+    collected_new_2 = Job(id=72, title="新規2", url="https://example.com/jobs/72")
+
+    result = merge_jobs(
+        [existing_job],
+        [collected_new_1, collected_new_2],
+        source_url,
+        now,
+    )
+
+    assert result.added_count == 2
+    assert result.updated_count == 0
+    assert [job.id for job in result.jobs] == [70, 71, 72]
+
+
+def test_merge_jobs_returns_updated_count_for_meaningful_changes_only() -> None:
+    now = "2026-07-09T01:00:00Z"
+    source_url = "https://crowdworks.jp/public/jobs/search?keyword=ai"
+
+    existing_changed = _build_existing_job_for_update_test()
+    existing_changed.id = 80
+
+    existing_unchanged = _build_existing_job_for_update_test()
+    existing_unchanged.id = 81
+
+    collected_changed = _build_new_job_for_update_test()
+    collected_changed.id = 80
+    collected_changed.title = "変更後タイトル"
+
+    collected_unchanged = _build_new_job_for_update_test()
+    collected_unchanged.id = 81
+
+    result = merge_jobs(
+        [existing_changed, existing_unchanged],
+        [collected_changed, collected_unchanged],
+        source_url,
+        now,
+    )
+
+    assert result.added_count == 0
+    assert result.updated_count == 1
+    assert result.jobs[0].title == "変更後タイトル"
+    assert result.jobs[1].title == "既存タイトル"
+
+
+def test_update_job_store_with_summary_returns_expired_removed_count() -> None:
+    source_url = "https://crowdworks.jp/public/jobs/search?keyword=ai"
+    now = "2026-07-09T02:00:00Z"
+    today = date(2026, 7, 2)
+
+    existing_alive = Job(
+        id=90,
+        title="既存期限内",
+        url="https://example.com/jobs/90",
+        application_deadline="2026年07月03日",
+    )
+    existing_expired = Job(
+        id=91,
+        title="既存期限切れ",
+        url="https://example.com/jobs/91",
+        application_deadline="2026年07月01日",
+    )
+    collected_new_alive = Job(
+        id=92,
+        title="新規期限内",
+        url="https://example.com/jobs/92",
+        application_deadline="2026年07月04日",
+    )
+    collected_new_expired = Job(
+        id=93,
+        title="新規期限切れ",
+        url="https://example.com/jobs/93",
+        application_deadline="2026年07月01日",
+    )
+
+    updated_jobs, summary = update_job_store_with_summary(
+        [existing_alive, existing_expired],
+        [collected_new_alive, collected_new_expired],
+        source_url,
+        now,
+        today=today,
+    )
+
+    assert [job.id for job in updated_jobs] == [90, 92]
+    assert summary == {
+        "added_count": 2,
+        "updated_count": 0,
+        "expired_removed_count": 2,
+        "saved_count": 2,
+    }

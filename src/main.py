@@ -154,7 +154,7 @@ def _run_collect_pipeline(args: argparse.Namespace, output_dir: Path) -> None:
 
     existing_jobs = load_jobs_from_json(jobs_path) if jobs_path.exists() else []
     collected_jobs = collect_jobs_from_url(args.url, limit=args.limit)
-    updated_jobs, update_summary = update_job_store_with_summary(
+    updated_jobs, store_summary = update_job_store_with_summary(
         existing_jobs, collected_jobs, args.url, now
     )
 
@@ -168,10 +168,10 @@ def _run_collect_pipeline(args: argparse.Namespace, output_dir: Path) -> None:
         "source_url": args.url,
         "existing_count": len(existing_jobs),
         "collected_count": len(collected_jobs),
-        "added_count": update_summary["added_count"],
-        "updated_count": update_summary["updated_count"],
-        "expired_removed_count": update_summary["expired_removed_count"],
-        "saved_count": update_summary["saved_count"],
+        "added_count": store_summary["added_count"],
+        "updated_count": store_summary["updated_count"],
+        "expired_removed_count": store_summary["expired_removed_count"],
+        "saved_count": store_summary["saved_count"],
         "output_files": {
             "jobs_json": str(jobs_path),
             "snapshot": str(snapshot_path),

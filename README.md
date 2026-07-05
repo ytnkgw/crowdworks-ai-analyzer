@@ -1,6 +1,6 @@
 # CrowdWorks AI Analyzer
 
-CrowdWorks AI Analyzer は、クラウドワークスで案件を探すときの「どの案件に応募するか」「どのように応募するか」の検討を、AIエージェント（ChatGPT、Gemini、Claude）と一緒に進めやすくするための Python CLI ツールです。
+CrowdWorks AI Analyzer は、クラウドワークスで案件を探すときの「どの案件に応募するか」「どのように応募するか」といった検討を、AIエージェント（ChatGPT、Gemini、Claude）と一緒に進めやすくするための Python CLI ツールです。
 
 クラウドワークス上の案件情報を収集し、AIエージェントが扱いやすいデータを生成します。生成した案件データは、案件の比較、応募優先度の整理、リスク確認、提案文作成などに活用できます。
 

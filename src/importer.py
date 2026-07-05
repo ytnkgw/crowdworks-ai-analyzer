@@ -42,11 +42,22 @@ def load_jobs_from_json(file_path: str | Path) -> list[Job]:
                 for source in sources_data:
                     if not isinstance(source, dict):
                         continue
+
+                    source_url = source.get("url")
+                    source_first_seen_at = source.get("first_seen_at")
+                    source_last_seen_at = source.get("last_seen_at")
+                    if not (
+                        isinstance(source_url, str)
+                        and isinstance(source_first_seen_at, str)
+                        and isinstance(source_last_seen_at, str)
+                    ):
+                        continue
+
                     sources.append(
                         JobSourceMetadata(
-                            url=source["url"],
-                            first_seen_at=source["first_seen_at"],
-                            last_seen_at=source["last_seen_at"],
+                            url=source_url,
+                            first_seen_at=source_first_seen_at,
+                            last_seen_at=source_last_seen_at,
                             seen_count=source.get("seen_count", 1),
                         )
                     )

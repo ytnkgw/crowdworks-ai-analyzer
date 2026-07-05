@@ -1,4 +1,4 @@
-from models import Job
+from models import Job, JobMetadata, JobSourceMetadata
 
 
 def build_job_index(jobs: list[Job]) -> dict[int, Job]:
@@ -36,3 +36,73 @@ def has_meaningful_changes(existing_job: Job, new_job: Job) -> bool:
             return True
 
     return False
+
+
+def initialize_job_metadata(job: Job, source_url: str, now: str) -> Job:
+    if job.metadata is None:
+        job.metadata = JobMetadata()
+
+    job.metadata.first_seen_at = now
+    job.metadata.last_seen_at = now
+    job.metadata.updated_at = now
+    job.metadata.sources = [
+        JobSourceMetadata(
+            url=source_url,
+            first_seen_at=now,
+            last_seen_at=now,
+            seen_count=1,
+        )
+    ]
+
+    return job
+
+
+def update_seen_metadata(job: Job, source_url: str, now: str) -> Job:
+    if job.metadata is None:
+        return initialize_job_metadata(job, source_url, now)
+
+    job.metadata.last_seen_at = now
+
+    for source in job.metadata.sources:
+        if source.url != source_url:
+            continue
+
+        source.last_seen_at = now
+        source.seen_count += 1
+        return job
+
+    job.metadata.sources.append(
+        JobSourceMetadata(
+            url=source_url,
+            first_seen_at=now,
+            last_seen_at=now,
+            seen_count=1,
+        )
+    )
+    return job
+
+
+def update_job_if_changed(existing_job: Job, new_job: Job, now: str) -> Job:
+    if not has_meaningful_changes(existing_job, new_job):
+        return existing_job
+
+    existing_job.title = new_job.title
+    existing_job.url = new_job.url
+    existing_job.category = new_job.category
+    existing_job.sub_category = new_job.sub_category
+    existing_job.description = new_job.description
+    existing_job.reward = new_job.reward
+    existing_job.application_deadline = new_job.application_deadline
+    existing_job.published_at = new_job.published_at
+    existing_job.delivery_deadline = new_job.delivery_deadline
+    existing_job.is_remote = new_job.is_remote
+    existing_job.application_count = new_job.application_count
+    existing_job.contract_count = new_job.contract_count
+    existing_job.recruitment_count = new_job.recruitment_count
+    existing_job.favorite_count = new_job.favorite_count
+    existing_job.client = new_job.client
+
+    if existing_job.metadata is not None:
+        existing_job.metadata.updated_at = now
+
+    return existing_job

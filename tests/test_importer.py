@@ -115,3 +115,39 @@ def test_load_jobs_from_json_restores_job_metadata(tmp_path: Path) -> None:
         == "https://crowdworks.jp/public/jobs/search?..."
     )
     assert jobs[0].metadata.sources[0].seen_count == 2
+
+
+def test_load_jobs_from_json_skips_invalid_metadata_sources(tmp_path: Path) -> None:
+    file_path = tmp_path / "jobs_with_invalid_sources.json"
+    payload = [
+        {
+            "id": 4,
+            "title": "invalid source付き案件",
+            "url": "https://example.com/jobs/4",
+            "metadata": {
+                "sources": [
+                    {
+                        "url": "https://valid.example",
+                        "first_seen_at": "2026-07-05",
+                        "last_seen_at": "2026-07-06",
+                    },
+                    {
+                        "url": "https://missing-first.example",
+                        "last_seen_at": "2026-07-06",
+                    },
+                    {"first_seen_at": "2026-07-05", "last_seen_at": "2026-07-06"},
+                    "not-a-dict",
+                ]
+            },
+        }
+    ]
+    file_path.write_text(
+        json.dumps(payload, ensure_ascii=False),
+        encoding="utf-8",
+    )
+
+    jobs = load_jobs_from_json(file_path)
+
+    assert jobs[0].metadata is not None
+    assert len(jobs[0].metadata.sources) == 1
+    assert jobs[0].metadata.sources[0].url == "https://valid.example"

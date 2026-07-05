@@ -5,8 +5,14 @@ import pytest
 
 sys.path.append(str(Path(__file__).resolve().parents[1] / "src"))
 
-from job_store import build_job_index, has_meaningful_changes
-from models import Client, Job
+from job_store import (
+    build_job_index,
+    has_meaningful_changes,
+    initialize_job_metadata,
+    update_job_if_changed,
+    update_seen_metadata,
+)
+from models import Client, Job, JobMetadata, JobSourceMetadata
 
 
 def test_build_job_index_returns_empty_dict_when_jobs_is_empty() -> None:
@@ -136,3 +142,307 @@ def test_has_meaningful_changes_returns_true_when_client_changed() -> None:
     )
 
     assert has_meaningful_changes(existing_job, new_job) is True
+
+
+def test_initialize_job_metadata_sets_metadata_on_job_without_metadata() -> None:
+    now = "2026-07-05T12:34:56Z"
+    source_url = "https://crowdworks.jp/public/jobs/search?..."
+    job = Job(id=100, title="新規案件", url="https://example.com/jobs/100")
+
+    updated = initialize_job_metadata(job, source_url, now)
+
+    assert isinstance(updated, Job)
+    assert updated.metadata is not None
+    assert updated.metadata.first_seen_at == now
+    assert updated.metadata.last_seen_at == now
+    assert updated.metadata.updated_at == now
+    assert len(updated.metadata.sources) == 1
+    assert updated.metadata.sources[0].url == source_url
+    assert updated.metadata.sources[0].first_seen_at == now
+    assert updated.metadata.sources[0].last_seen_at == now
+    assert updated.metadata.sources[0].seen_count == 1
+
+
+def _build_job_with_metadata() -> Job:
+    return Job(
+        id=200,
+        title="既存案件",
+        url="https://example.com/jobs/200",
+        metadata=JobMetadata(
+            first_seen_at="2026-07-01T00:00:00Z",
+            last_seen_at="2026-07-02T00:00:00Z",
+            updated_at="2026-07-03T00:00:00Z",
+            sources=[
+                JobSourceMetadata(
+                    url="https://crowdworks.jp/public/jobs/search?keyword=ai",
+                    first_seen_at="2026-07-01T00:00:00Z",
+                    last_seen_at="2026-07-02T00:00:00Z",
+                    seen_count=2,
+                )
+            ],
+        ),
+    )
+
+
+def test_update_seen_metadata_initializes_when_metadata_is_none() -> None:
+    now = "2026-07-05T12:00:00Z"
+    source_url = "https://crowdworks.jp/public/jobs/search?keyword=ai"
+    job = Job(id=300, title="新規案件", url="https://example.com/jobs/300")
+
+    updated = update_seen_metadata(job, source_url, now)
+
+    assert updated.metadata is not None
+    assert updated.metadata.first_seen_at == now
+    assert updated.metadata.last_seen_at == now
+    assert updated.metadata.updated_at == now
+    assert len(updated.metadata.sources) == 1
+    assert updated.metadata.sources[0].url == source_url
+    assert updated.metadata.sources[0].first_seen_at == now
+    assert updated.metadata.sources[0].last_seen_at == now
+    assert updated.metadata.sources[0].seen_count == 1
+
+
+def test_update_seen_metadata_updates_metadata_last_seen_at() -> None:
+    now = "2026-07-05T13:00:00Z"
+    source_url = "https://crowdworks.jp/public/jobs/search?keyword=ai"
+    job = _build_job_with_metadata()
+
+    updated = update_seen_metadata(job, source_url, now)
+
+    assert updated.metadata is not None
+    assert updated.metadata.last_seen_at == now
+
+
+def test_update_seen_metadata_does_not_update_metadata_updated_at() -> None:
+    now = "2026-07-05T13:00:00Z"
+    source_url = "https://crowdworks.jp/public/jobs/search?keyword=ai"
+    job = _build_job_with_metadata()
+    previous_updated_at = job.metadata.updated_at
+
+    updated = update_seen_metadata(job, source_url, now)
+
+    assert updated.metadata is not None
+    assert updated.metadata.updated_at == previous_updated_at
+
+
+def test_update_seen_metadata_updates_existing_source_last_seen_at() -> None:
+    now = "2026-07-05T13:00:00Z"
+    source_url = "https://crowdworks.jp/public/jobs/search?keyword=ai"
+    job = _build_job_with_metadata()
+
+    updated = update_seen_metadata(job, source_url, now)
+
+    assert updated.metadata is not None
+    assert updated.metadata.sources[0].last_seen_at == now
+
+
+def test_update_seen_metadata_increments_existing_source_seen_count() -> None:
+    now = "2026-07-05T13:00:00Z"
+    source_url = "https://crowdworks.jp/public/jobs/search?keyword=ai"
+    job = _build_job_with_metadata()
+
+    updated = update_seen_metadata(job, source_url, now)
+
+    assert updated.metadata is not None
+    assert updated.metadata.sources[0].seen_count == 3
+
+
+def test_update_seen_metadata_keeps_existing_source_first_seen_at() -> None:
+    now = "2026-07-05T13:00:00Z"
+    source_url = "https://crowdworks.jp/public/jobs/search?keyword=ai"
+    job = _build_job_with_metadata()
+    previous_first_seen_at = job.metadata.sources[0].first_seen_at
+
+    updated = update_seen_metadata(job, source_url, now)
+
+    assert updated.metadata is not None
+    assert updated.metadata.sources[0].first_seen_at == previous_first_seen_at
+
+
+def test_update_seen_metadata_appends_new_source_when_url_not_found() -> None:
+    now = "2026-07-05T13:00:00Z"
+    source_url = "https://crowdworks.jp/public/jobs/search?keyword=python"
+    job = _build_job_with_metadata()
+
+    updated = update_seen_metadata(job, source_url, now)
+
+    assert updated.metadata is not None
+    assert len(updated.metadata.sources) == 2
+    new_source = updated.metadata.sources[1]
+    assert new_source.url == source_url
+    assert new_source.first_seen_at == now
+    assert new_source.last_seen_at == now
+    assert new_source.seen_count == 1
+
+
+def _build_existing_job_for_update_test() -> Job:
+    return Job(
+        id=400,
+        title="既存タイトル",
+        url="https://example.com/jobs/400",
+        category="カテゴリA",
+        sub_category="サブA",
+        description="既存説明",
+        reward="1000円",
+        application_deadline="2026-07-10",
+        published_at="2026-07-01",
+        delivery_deadline="2026-07-31",
+        is_remote=True,
+        application_count=3,
+        contract_count=0,
+        recruitment_count=1,
+        favorite_count=10,
+        client=Client(id=1, name="既存クライアント"),
+        metadata=JobMetadata(
+            first_seen_at="2026-07-01T00:00:00Z",
+            last_seen_at="2026-07-05T00:00:00Z",
+            updated_at="2026-07-05T00:00:00Z",
+            sources=[
+                JobSourceMetadata(
+                    url="https://crowdworks.jp/public/jobs/search?keyword=ai",
+                    first_seen_at="2026-07-01T00:00:00Z",
+                    last_seen_at="2026-07-05T00:00:00Z",
+                    seen_count=2,
+                )
+            ],
+        ),
+    )
+
+
+def _build_new_job_for_update_test() -> Job:
+    return Job(
+        id=400,
+        title="既存タイトル",
+        url="https://example.com/jobs/400",
+        category="カテゴリA",
+        sub_category="サブA",
+        description="既存説明",
+        reward="1000円",
+        application_deadline="2026-07-10",
+        published_at="2026-07-01",
+        delivery_deadline="2026-07-31",
+        is_remote=True,
+        application_count=3,
+        contract_count=0,
+        recruitment_count=1,
+        favorite_count=10,
+        client=Client(id=1, name="既存クライアント"),
+    )
+
+
+def test_update_job_if_changed_returns_existing_job_without_changes() -> None:
+    now = "2026-07-06T00:00:00Z"
+    existing_job = _build_existing_job_for_update_test()
+    new_job = _build_new_job_for_update_test()
+
+    updated = update_job_if_changed(existing_job, new_job, now)
+
+    assert updated is existing_job
+    assert updated.title == "既存タイトル"
+
+
+def test_update_job_if_changed_does_not_update_updated_at_without_changes() -> None:
+    now = "2026-07-06T00:00:00Z"
+    existing_job = _build_existing_job_for_update_test()
+    new_job = _build_new_job_for_update_test()
+    previous_updated_at = existing_job.metadata.updated_at
+
+    updated = update_job_if_changed(existing_job, new_job, now)
+
+    assert updated.metadata is not None
+    assert updated.metadata.updated_at == previous_updated_at
+
+
+def test_update_job_if_changed_updates_title_when_changed() -> None:
+    now = "2026-07-06T00:00:00Z"
+    existing_job = _build_existing_job_for_update_test()
+    new_job = _build_new_job_for_update_test()
+    new_job.title = "更新タイトル"
+
+    updated = update_job_if_changed(existing_job, new_job, now)
+
+    assert updated.title == "更新タイトル"
+
+
+def test_update_job_if_changed_updates_reward_when_changed() -> None:
+    now = "2026-07-06T00:00:00Z"
+    existing_job = _build_existing_job_for_update_test()
+    new_job = _build_new_job_for_update_test()
+    new_job.reward = "3000円"
+
+    updated = update_job_if_changed(existing_job, new_job, now)
+
+    assert updated.reward == "3000円"
+
+
+def test_update_job_if_changed_updates_application_count_when_changed() -> None:
+    now = "2026-07-06T00:00:00Z"
+    existing_job = _build_existing_job_for_update_test()
+    new_job = _build_new_job_for_update_test()
+    new_job.application_count = 8
+
+    updated = update_job_if_changed(existing_job, new_job, now)
+
+    assert updated.application_count == 8
+
+
+def test_update_job_if_changed_updates_client_when_changed() -> None:
+    now = "2026-07-06T00:00:00Z"
+    existing_job = _build_existing_job_for_update_test()
+    new_job = _build_new_job_for_update_test()
+    new_job.client = Client(id=2, name="更新クライアント")
+
+    updated = update_job_if_changed(existing_job, new_job, now)
+
+    assert updated.client == new_job.client
+
+
+def test_update_job_if_changed_updates_metadata_updated_at_when_changed() -> None:
+    now = "2026-07-06T00:00:00Z"
+    existing_job = _build_existing_job_for_update_test()
+    new_job = _build_new_job_for_update_test()
+    new_job.title = "更新タイトル"
+
+    updated = update_job_if_changed(existing_job, new_job, now)
+
+    assert updated.metadata is not None
+    assert updated.metadata.updated_at == now
+
+
+def test_update_job_if_changed_keeps_metadata_first_seen_at_when_changed() -> None:
+    now = "2026-07-06T00:00:00Z"
+    existing_job = _build_existing_job_for_update_test()
+    new_job = _build_new_job_for_update_test()
+    new_job.title = "更新タイトル"
+    previous_first_seen_at = existing_job.metadata.first_seen_at
+
+    updated = update_job_if_changed(existing_job, new_job, now)
+
+    assert updated.metadata is not None
+    assert updated.metadata.first_seen_at == previous_first_seen_at
+
+
+def test_update_job_if_changed_keeps_metadata_last_seen_at_when_changed() -> None:
+    now = "2026-07-06T00:00:00Z"
+    existing_job = _build_existing_job_for_update_test()
+    new_job = _build_new_job_for_update_test()
+    new_job.title = "更新タイトル"
+    previous_last_seen_at = existing_job.metadata.last_seen_at
+
+    updated = update_job_if_changed(existing_job, new_job, now)
+
+    assert updated.metadata is not None
+    assert updated.metadata.last_seen_at == previous_last_seen_at
+
+
+def test_update_job_if_changed_keeps_metadata_sources_when_changed() -> None:
+    now = "2026-07-06T00:00:00Z"
+    existing_job = _build_existing_job_for_update_test()
+    new_job = _build_new_job_for_update_test()
+    new_job.title = "更新タイトル"
+    previous_sources = existing_job.metadata.sources
+
+    updated = update_job_if_changed(existing_job, new_job, now)
+
+    assert updated.metadata is not None
+    assert updated.metadata.sources is previous_sources

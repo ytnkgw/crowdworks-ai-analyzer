@@ -9,7 +9,7 @@ from exporter import (
     export_jobs_to_json,
     export_ranked_job_analysis_results,
 )
-from deadline_filter import should_exclude_by_deadline, filter_expired_jobs
+from job_filter import should_exclude_by_deadline, filter_expired_jobs
 from fetcher import fetch_html
 from models import Job
 from openai_client import analyze_job

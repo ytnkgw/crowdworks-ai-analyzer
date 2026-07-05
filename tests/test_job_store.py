@@ -1,3 +1,4 @@
+from datetime import date
 import sys
 from pathlib import Path
 
@@ -10,7 +11,9 @@ from job_store import (
     has_meaningful_changes,
     initialize_job_metadata,
     merge_jobs,
+    remove_expired_jobs,
     update_job_if_changed,
+    update_job_store,
     update_seen_metadata,
 )
 from models import Client, Job, JobMetadata, JobSourceMetadata
@@ -587,3 +590,167 @@ def test_merge_jobs_preserves_existing_order_and_appends_new_jobs_to_end() -> No
     merged = merge_jobs([existing1, existing2], collected_jobs, source_url, now)
 
     assert [job.id for job in merged] == [30, 31, 32, 33]
+
+
+def test_remove_expired_jobs_excludes_expired_jobs() -> None:
+    jobs = [
+        Job(
+            id=1,
+            title="期限切れ",
+            url="https://example.com/jobs/1",
+            application_deadline="2026年07月01日",
+        ),
+        Job(
+            id=2,
+            title="期限内",
+            url="https://example.com/jobs/2",
+            application_deadline="2026年07月03日",
+        ),
+    ]
+
+    filtered = remove_expired_jobs(jobs, today=date(2026, 7, 2))
+
+    assert [job.id for job in filtered] == [2]
+
+
+def test_remove_expired_jobs_keeps_jobs_with_no_deadline() -> None:
+    jobs = [
+        Job(
+            id=3,
+            title="期限不明",
+            url="https://example.com/jobs/3",
+            application_deadline=None,
+        )
+    ]
+
+    filtered = remove_expired_jobs(jobs, today=date(2026, 7, 2))
+
+    assert [job.id for job in filtered] == [3]
+
+
+def test_remove_expired_jobs_keeps_jobs_with_unparseable_deadline() -> None:
+    jobs = [
+        Job(
+            id=4,
+            title="解析不能期限",
+            url="https://example.com/jobs/4",
+            application_deadline="応募期限未定",
+        )
+    ]
+
+    filtered = remove_expired_jobs(jobs, today=date(2026, 7, 2))
+
+    assert [job.id for job in filtered] == [4]
+
+
+def test_remove_expired_jobs_preserves_original_order() -> None:
+    jobs = [
+        Job(
+            id=5,
+            title="期限内A",
+            url="https://example.com/jobs/5",
+            application_deadline="2026年07月03日",
+        ),
+        Job(
+            id=6,
+            title="期限切れ",
+            url="https://example.com/jobs/6",
+            application_deadline="2026年07月01日",
+        ),
+        Job(
+            id=7,
+            title="期限内B",
+            url="https://example.com/jobs/7",
+            application_deadline="2026年07月04日",
+        ),
+        Job(
+            id=8,
+            title="期限なし",
+            url="https://example.com/jobs/8",
+            application_deadline=None,
+        ),
+        Job(
+            id=9,
+            title="解析不能",
+            url="https://example.com/jobs/9",
+            application_deadline="応募期限未定",
+        ),
+    ]
+
+    filtered = remove_expired_jobs(jobs, today=date(2026, 7, 2))
+
+    assert [job.id for job in filtered] == [5, 7, 8, 9]
+
+
+def test_update_job_store_adds_new_updates_existing_and_removes_expired() -> None:
+    source_url = "https://crowdworks.jp/public/jobs/search?keyword=ai"
+    now = "2026-07-08T00:00:00Z"
+    today = date(2026, 7, 2)
+
+    existing_job = _build_existing_job_for_update_test()
+    existing_job.id = 50
+    existing_job.title = "既存タイトル"
+    existing_job.application_deadline = "2026年07月10日"
+
+    collected_updated = _build_new_job_for_update_test()
+    collected_updated.id = 50
+    collected_updated.title = "更新後タイトル"
+    collected_updated.application_deadline = "2026年07月10日"
+
+    collected_new_alive = Job(
+        id=51,
+        title="新規期限内",
+        url="https://example.com/jobs/51",
+        application_deadline="2026年07月03日",
+    )
+    collected_new_expired = Job(
+        id=52,
+        title="新規期限切れ",
+        url="https://example.com/jobs/52",
+        application_deadline="2026年07月01日",
+    )
+
+    updated = update_job_store(
+        [existing_job],
+        [collected_updated, collected_new_alive, collected_new_expired],
+        source_url,
+        now,
+        today=today,
+    )
+
+    assert [job.id for job in updated] == [50, 51]
+    assert updated[0].title == "更新後タイトル"
+    assert updated[1].metadata is not None
+
+
+def test_update_job_store_keeps_uncollected_existing_job_if_not_expired() -> None:
+    source_url = "https://crowdworks.jp/public/jobs/search?keyword=ai"
+    now = "2026-07-08T00:00:00Z"
+    today = date(2026, 7, 2)
+
+    existing_collected = _build_existing_job_for_update_test()
+    existing_collected.id = 60
+    existing_collected.application_deadline = "2026年07月03日"
+
+    existing_uncollected = _build_existing_job_for_update_test()
+    existing_uncollected.id = 61
+    existing_uncollected.application_deadline = "2026年07月04日"
+
+    collected = [
+        Job(
+            id=60,
+            title="既存タイトル",
+            url="https://example.com/jobs/400",
+            application_deadline="2026年07月03日",
+        )
+    ]
+
+    updated = update_job_store(
+        [existing_collected, existing_uncollected],
+        collected,
+        source_url,
+        now,
+        today=today,
+    )
+
+    assert [job.id for job in updated] == [60, 61]

@@ -1,3 +1,6 @@
+from datetime import date
+
+from job_filter import should_exclude_by_deadline
 from models import Job, JobMetadata, JobSourceMetadata
 
 
@@ -131,3 +134,25 @@ def merge_jobs(
         update_job_if_changed(existing_job, collected_job, now)
 
     return merged_jobs
+
+
+def remove_expired_jobs(jobs: list[Job], today: date | None = None) -> list[Job]:
+    filtered: list[Job] = []
+
+    for job in jobs:
+        if should_exclude_by_deadline(job.application_deadline, today=today):
+            continue
+        filtered.append(job)
+
+    return filtered
+
+
+def update_job_store(
+    existing_jobs: list[Job],
+    collected_jobs: list[Job],
+    source_url: str,
+    now: str,
+    today: date | None = None,
+) -> list[Job]:
+    merged_jobs = merge_jobs(existing_jobs, collected_jobs, source_url, now)
+    return remove_expired_jobs(merged_jobs, today=today)

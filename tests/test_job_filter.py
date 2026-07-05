@@ -5,7 +5,7 @@ from pathlib import Path
 
 sys.path.append(str(Path(__file__).resolve().parents[1] / "src"))
 
-from deadline_filter import (  # noqa: E402
+from job_filter import (  # noqa: E402
     get_today_jst,
     parse_application_deadline,
     should_exclude_by_deadline,

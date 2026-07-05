@@ -14,6 +14,22 @@ class Client:
 
 
 @dataclass
+class JobSourceMetadata:
+    url: str
+    first_seen_at: str
+    last_seen_at: str
+    seen_count: int = 1
+
+
+@dataclass
+class JobMetadata:
+    first_seen_at: str | None = None
+    last_seen_at: str | None = None
+    updated_at: str | None = None
+    sources: list[JobSourceMetadata] = field(default_factory=list)
+
+
+@dataclass
 class Job:
     id: int
     title: str
@@ -35,6 +51,7 @@ class Job:
     favorite_count: int | None = None
 
     client: Client | None = None
+    metadata: JobMetadata | None = None
 
 
 @dataclass

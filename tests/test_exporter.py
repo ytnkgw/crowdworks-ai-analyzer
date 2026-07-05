@@ -137,6 +137,70 @@ def test_export_jobs_to_json_includes_detail_fields(tmp_path: Path) -> None:
     )
 
 
+def test_export_jobs_to_json_saves_job_list(tmp_path: Path) -> None:
+    jobs = [
+        Job(
+            id=1,
+            title="案件1",
+            url="https://example.com/jobs/1",
+        ),
+        Job(
+            id=2,
+            title="案件2",
+            url="https://example.com/jobs/2",
+        ),
+    ]
+
+    output_path = tmp_path / "jobs.json"
+    export_jobs_to_json(jobs, output_path)
+
+    written = json.loads(output_path.read_text(encoding="utf-8"))
+
+    assert isinstance(written, list)
+    assert len(written) == 2
+    assert written[0]["id"] == 1
+    assert written[1]["id"] == 2
+
+
+def test_export_jobs_to_json_writes_utf8_and_unescaped_japanese(tmp_path: Path) -> None:
+    jobs = [
+        Job(
+            id=1,
+            title="日本語タイトル",
+            url="https://example.com/jobs/1",
+            description="案件の説明文です。",
+        )
+    ]
+
+    output_path = tmp_path / "jobs_ja.json"
+    export_jobs_to_json(jobs, output_path)
+
+    text = output_path.read_text(encoding="utf-8")
+
+    assert "日本語タイトル" in text
+    assert "案件の説明文です。" in text
+    assert "\\u65e5\\u672c" not in text
+    assert "\n  {" in text
+
+
+def test_export_jobs_to_json_creates_parent_directories(tmp_path: Path) -> None:
+    jobs = [
+        Job(
+            id=1,
+            title="案件タイトル",
+            url="https://example.com/jobs/1",
+        )
+    ]
+
+    output_path = tmp_path / "nested" / "deep" / "jobs.json"
+    export_jobs_to_json(jobs, output_path)
+
+    assert output_path.exists()
+
+    written = json.loads(output_path.read_text(encoding="utf-8"))
+    assert written[0]["id"] == 1
+
+
 def test_build_raw_jobs_filename_uses_category_date_and_page() -> None:
     filename = build_raw_jobs_filename(
         "https://crowdworks.jp/public/jobs/group/development?page=2",

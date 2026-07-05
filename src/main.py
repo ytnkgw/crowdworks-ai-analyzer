@@ -15,11 +15,7 @@ from exporter import (
     export_ranked_job_analysis_results,
 )
 from job_filter import filter_expired_jobs
-from fetcher import fetch_html
-from models import Job
 from openai_client import analyze_job
-from parser import parse_jobs
-from parser import parse_job_detail
 from ranking import rank_job_analysis_results
 from ranking_display import format_ranked_jobs
 from report_exporter import export_ranked_jobs_report

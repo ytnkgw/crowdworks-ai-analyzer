@@ -502,7 +502,7 @@ def test_merge_jobs_adds_collected_jobs_when_existing_is_empty() -> None:
 
     merged = merge_jobs([], collected_jobs, source_url, now)
 
-    assert [job.id for job in merged] == [1, 2]
+    assert [job.id for job in merged.jobs] == [1, 2]
 
 
 def test_merge_jobs_initializes_metadata_for_new_job() -> None:
@@ -512,12 +512,12 @@ def test_merge_jobs_initializes_metadata_for_new_job() -> None:
 
     merged = merge_jobs([], [collected_job], source_url, now)
 
-    assert merged[0].metadata is not None
-    assert merged[0].metadata.first_seen_at == now
-    assert merged[0].metadata.last_seen_at == now
-    assert merged[0].metadata.updated_at == now
-    assert len(merged[0].metadata.sources) == 1
-    assert merged[0].metadata.sources[0].url == source_url
+    assert merged.jobs[0].metadata is not None
+    assert merged.jobs[0].metadata.first_seen_at == now
+    assert merged.jobs[0].metadata.last_seen_at == now
+    assert merged.jobs[0].metadata.updated_at == now
+    assert len(merged.jobs[0].metadata.sources) == 1
+    assert merged.jobs[0].metadata.sources[0].url == source_url
 
 
 def test_merge_jobs_does_not_duplicate_when_id_already_exists() -> None:
@@ -529,8 +529,8 @@ def test_merge_jobs_does_not_duplicate_when_id_already_exists() -> None:
 
     merged = merge_jobs([existing_job], [collected_job], source_url, now)
 
-    assert len(merged) == 1
-    assert merged[0] is existing_job
+    assert len(merged.jobs) == 1
+    assert merged.jobs[0] is existing_job
 
 
 def test_merge_jobs_updates_last_seen_and_seen_count_for_existing_job() -> None:
@@ -544,9 +544,9 @@ def test_merge_jobs_updates_last_seen_and_seen_count_for_existing_job() -> None:
 
     merged = merge_jobs([existing_job], [collected_job], source_url, now)
 
-    assert merged[0].metadata is not None
-    assert merged[0].metadata.last_seen_at == now
-    assert merged[0].metadata.sources[0].seen_count == previous_seen_count + 1
+    assert merged.jobs[0].metadata is not None
+    assert merged.jobs[0].metadata.last_seen_at == now
+    assert merged.jobs[0].metadata.sources[0].seen_count == previous_seen_count + 1
 
 
 def test_merge_jobs_updates_existing_job_body_and_updated_at_when_changed() -> None:
@@ -559,10 +559,10 @@ def test_merge_jobs_updates_existing_job_body_and_updated_at_when_changed() -> N
 
     merged = merge_jobs([existing_job], [collected_job], source_url, now)
 
-    assert merged[0].title == "変更後タイトル"
-    assert merged[0].reward == "5000円"
-    assert merged[0].metadata is not None
-    assert merged[0].metadata.updated_at == now
+    assert merged.jobs[0].title == "変更後タイトル"
+    assert merged.jobs[0].reward == "5000円"
+    assert merged.jobs[0].metadata is not None
+    assert merged.jobs[0].metadata.updated_at == now
 
 
 def test_merge_jobs_keeps_uncollected_existing_jobs() -> None:
@@ -578,7 +578,7 @@ def test_merge_jobs_keeps_uncollected_existing_jobs() -> None:
 
     merged = merge_jobs([existing1, existing2], collected_jobs, source_url, now)
 
-    assert [job.id for job in merged] == [20, 21]
+    assert [job.id for job in merged.jobs] == [20, 21]
 
 
 def test_merge_jobs_preserves_existing_order_and_appends_new_jobs_to_end() -> None:
@@ -596,7 +596,7 @@ def test_merge_jobs_preserves_existing_order_and_appends_new_jobs_to_end() -> No
 
     merged = merge_jobs([existing1, existing2], collected_jobs, source_url, now)
 
-    assert [job.id for job in merged] == [30, 31, 32, 33]
+    assert [job.id for job in merged.jobs] == [30, 31, 32, 33]
 
 
 def test_remove_expired_jobs_excludes_expired_jobs() -> None:

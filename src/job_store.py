@@ -1,7 +1,15 @@
+from dataclasses import dataclass
 from datetime import date
 
 from job_filter import should_exclude_by_deadline
 from models import Job, JobMetadata, JobSourceMetadata
+
+
+@dataclass
+class JobMergeResult:
+    jobs: list[Job]
+    added_count: int
+    updated_count: int
 
 
 def build_job_index(jobs: list[Job]) -> dict[int, Job]:
@@ -118,9 +126,12 @@ def merge_jobs(
     collected_jobs: list[Job],
     source_url: str,
     now: str,
-) -> list[Job]:
+) -> JobMergeResult:
     merged_jobs = list(existing_jobs)
     existing_index = build_job_index(existing_jobs)
+
+    added_count = 0
+    updated_count = 0
 
     for collected_job in collected_jobs:
         existing_job = existing_index.get(collected_job.id)
@@ -128,12 +139,21 @@ def merge_jobs(
             initialize_job_metadata(collected_job, source_url, now)
             merged_jobs.append(collected_job)
             existing_index[collected_job.id] = collected_job
+            added_count += 1
             continue
 
+        was_changed = has_meaningful_changes(existing_job, collected_job)
         update_seen_metadata(existing_job, source_url, now)
         update_job_if_changed(existing_job, collected_job, now)
 
-    return merged_jobs
+        if was_changed:
+            updated_count += 1
+
+    return JobMergeResult(
+        jobs=merged_jobs,
+        added_count=added_count,
+        updated_count=updated_count,
+    )
 
 
 def remove_expired_jobs(jobs: list[Job], today: date | None = None) -> list[Job]:
@@ -155,4 +175,24 @@ def update_job_store(
     today: date | None = None,
 ) -> list[Job]:
     merged_jobs = merge_jobs(existing_jobs, collected_jobs, source_url, now)
-    return remove_expired_jobs(merged_jobs, today=today)
+    return remove_expired_jobs(merged_jobs.jobs, today=today)
+
+
+def update_job_store_with_summary(
+    existing_jobs: list[Job],
+    collected_jobs: list[Job],
+    source_url: str,
+    now: str,
+    today: date | None = None,
+) -> tuple[list[Job], dict[str, int]]:
+    merge_result = merge_jobs(existing_jobs, collected_jobs, source_url, now)
+    updated_jobs = remove_expired_jobs(merge_result.jobs, today=today)
+
+    summary = {
+        "added_count": merge_result.added_count,
+        "updated_count": merge_result.updated_count,
+        "expired_removed_count": len(merge_result.jobs) - len(updated_jobs),
+        "saved_count": len(updated_jobs),
+    }
+
+    return updated_jobs, summary

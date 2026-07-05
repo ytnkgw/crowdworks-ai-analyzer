@@ -21,7 +21,11 @@ from ranking_display import format_ranked_jobs
 from report_exporter import export_ranked_jobs_report
 from job_collector import collect_jobs_from_url
 from importer import load_jobs_from_json
-from job_store import remove_expired_jobs, update_job_store
+from job_store import (
+    remove_expired_jobs,
+    update_job_store,
+    update_job_store_with_summary,
+)
 
 _JST = ZoneInfo("Asia/Tokyo")
 
@@ -150,7 +154,9 @@ def _run_collect_pipeline(args: argparse.Namespace, output_dir: Path) -> None:
 
     existing_jobs = load_jobs_from_json(jobs_path) if jobs_path.exists() else []
     collected_jobs = collect_jobs_from_url(args.url, limit=args.limit)
-    updated_jobs = update_job_store(existing_jobs, collected_jobs, args.url, now)
+    updated_jobs, update_summary = update_job_store_with_summary(
+        existing_jobs, collected_jobs, args.url, now
+    )
 
     raw_output_path = save_raw_jobs(collected_jobs, args.url, output_dir=output_dir)
     export_jobs_to_json(updated_jobs, jobs_path)
@@ -162,7 +168,10 @@ def _run_collect_pipeline(args: argparse.Namespace, output_dir: Path) -> None:
         "source_url": args.url,
         "existing_count": len(existing_jobs),
         "collected_count": len(collected_jobs),
-        "saved_count": len(updated_jobs),
+        "added_count": update_summary["added_count"],
+        "updated_count": update_summary["updated_count"],
+        "expired_removed_count": update_summary["expired_removed_count"],
+        "saved_count": update_summary["saved_count"],
         "output_files": {
             "jobs_json": str(jobs_path),
             "snapshot": str(snapshot_path),

@@ -11,6 +11,7 @@ from exporter import (
     export_job_analysis_results,
     export_jobs_for_ai_jsonl,
     export_jobs_to_json,
+    export_update_summary,
     save_jobs_snapshot,
     save_raw_jobs,
 )
@@ -326,3 +327,27 @@ def test_export_jobs_for_ai_jsonl_writes_multiple_lines_with_utf8_and_metadata(
     first = json.loads(lines[0])
     assert first["metadata"] is not None
     assert first["metadata"]["sources"][0]["seen_count"] == 1
+
+
+def test_export_update_summary_writes_utf8_json_and_creates_parent_dir(
+    tmp_path: Path,
+) -> None:
+    summary = {
+        "collected": 3,
+        "saved": 5,
+        "message": "更新サマリー",
+        "details": {"new": 2, "updated": 1, "unchanged": 0},
+    }
+    output_path = tmp_path / "nested" / "reports" / "update_summary.json"
+
+    export_update_summary(summary, output_path)
+
+    assert output_path.exists()
+    assert output_path.parent.is_dir()
+
+    text = output_path.read_text(encoding="utf-8")
+    assert "更新サマリー" in text
+    assert "\\u66f4\\u65b0" not in text
+
+    written = json.loads(text)
+    assert written == summary

@@ -473,6 +473,7 @@ def test_main_collect_jobs_passes_limit_to_collector(
     assert "Saved pipeline jobs:" in output.getvalue()
     assert "Saved snapshot:" in output.getvalue()
     assert "Saved jobs for AI:" in output.getvalue()
+    assert "Saved update summary:" in output.getvalue()
 
 
 def test_main_collect_jobs_excludes_expired_deadline_jobs(
@@ -525,6 +526,7 @@ def test_main_collect_jobs_excludes_expired_deadline_jobs(
     assert jobs_payload[0]["title"] == "募集中案件"
     assert "Saved snapshot:" in output.getvalue()
     assert "Saved jobs for AI:" in output.getvalue()
+    assert "Saved update summary:" in output.getvalue()
     assert "Collected 2 jobs." in output.getvalue()
     assert "Saved 1 jobs after update." in output.getvalue()
 
@@ -762,5 +764,6 @@ def test_main_collect_jobs_and_analyze_runs_both_pipelines(
     assert (output_dir / config.OUTPUT_ANALYSIS_RESULTS_FILENAME).exists()
     assert "Saved snapshot:" in output.getvalue()
     assert "Saved jobs for AI:" in output.getvalue()
+    assert "Saved update summary:" in output.getvalue()
     assert "Collected 1 jobs." in output.getvalue()
     assert "Analyzed 1 jobs." in output.getvalue()

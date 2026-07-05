@@ -123,6 +123,11 @@ def export_jobs_for_ai_jsonl(jobs: list[Job], file_path: str | Path) -> None:
             f.write(json.dumps(record, ensure_ascii=False) + "\n")
 
 
+def export_update_summary(summary: dict, file_path: str | Path) -> None:
+    """更新サマリーを UTF-8 形式の JSON ファイルとして保存します。"""
+    _write_json_file(summary, file_path)
+
+
 def export_job_analysis_results(items: list[dict], output_path: str | Path) -> None:
     """job/analysis のペアを UTF-8 形式の JSON ファイルとして保存します。"""
     _write_json_file(items, output_path)

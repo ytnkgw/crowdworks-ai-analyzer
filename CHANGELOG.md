@@ -1,3 +1,48 @@
+## [0.5.0] - 2026-07-05
+
+### Added
+
+#### Continuous Jobs Store
+
+- 既存の `output/jobs.json` を読み込み、新規取得案件とマージして継続更新できる仕組みを追加
+- `src/job_store.py` を追加し、案件データの読み込み後のマージ、更新、期限切れ除外を管理するようにした
+- `src/importer.py` を追加し、既存 `jobs.json` から `Job` / `Client` / `JobMetadata` / `JobSourceMetadata` を復元できるようにした
+- `Job` に `metadata` を追加し、案件ごとの初回発見日時・最終確認日時・更新日時・取得元URLを管理できるようにした
+- `JobMetadata` / `JobSourceMetadata` を追加し、`first_seen_at` / `last_seen_at` / `updated_at` / `sources` / `seen_count` を保持できるようにした
+- 既存案件と新規取得案件をIDベースでマージする `merge_jobs()` を追加
+- 既存案件の意味のある変更を判定する `has_meaningful_changes()` を追加
+- 既存案件の `metadata.last_seen_at` と `metadata.sources[].seen_count` を更新できるようにした
+- 今回取得されなかった既存案件は削除せず、継続保持するようにした
+- 応募期限切れ案件を `jobs.json` 更新時に除外できるようにした
+
+#### Output Files
+
+- 更新時点の案件データを `output/snapshots/jobs_YYYYMMDD_HHMMSS.json` として保存できるようにした
+- ChatGPTやClaudeなどのAIエージェントに渡しやすい `output/jobs_for_ai.jsonl` を出力できるようにした
+- 最新更新結果のサマリーとして `output/update_summary.json` を出力できるようにした
+- `update_summary.json` に `added_count` / `updated_count` / `expired_removed_count` / `saved_count` を出力できるようにした
+- `config.py` に `OUTPUT_JOBS_FOR_AI_FILENAME` / `OUTPUT_UPDATE_SUMMARY_FILENAME` を追加
+
+### Changed
+
+- `--collect-jobs` 実行時に、毎回 `output/jobs.json` を単純上書きするのではなく、既存データを読み込んで継続更新するように変更
+- `--collect-jobs` 実行時に、raw出力、継続更新後の `jobs.json`、snapshot、AI向けJSONL、更新サマリーをまとめて出力するように変更
+- 期限切れ判定用モジュールを `deadline_filter.py` から `job_filter.py` に整理し、今後のフィルタ拡張に備えた
+- `main.py` のcollect pipelineで `update_job_store_with_summary()` を使い、更新件数を `update_summary.json` に反映するように変更
+- READMEにv0.5.0で追加された出力ファイルと継続更新ワークフローの説明を追記
+- `main.py` の不要importを整理
+
+### Verified
+
+- `pytest` 全件通過を確認
+- `--collect-jobs` 実行後に `output/jobs.json` が継続更新されることを確認
+- `output/snapshots/jobs_YYYYMMDD_HHMMSS.json` が保存されることを確認
+- `output/jobs_for_ai.jsonl` が保存されることを確認
+- `output/update_summary.json` が保存されることを確認
+- `update_summary.json` に `added_count` / `updated_count` / `expired_removed_count` / `saved_count` が出力されることを確認
+- GitHub Issue #21 のDefinition of Doneをすべて満たしたことを確認
+
+
 ## [0.4.0] - 2026-07-02
 
 ### Changed

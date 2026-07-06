@@ -1,4 +1,6 @@
 import requests
+import time
+import config
 
 from fetcher import fetch_html
 from models import Job
@@ -27,5 +29,6 @@ def collect_jobs_from_url(url: str, limit: int | None = None) -> list[Job]:
                 )
                 continue
             raise
+        time.sleep(config.REQUEST_SLEEP_SECONDS)
 
     return jobs

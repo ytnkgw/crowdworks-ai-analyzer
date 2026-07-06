@@ -5,8 +5,9 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 ROOT_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
 
-LIMIT="${LIMIT:-10}"
+LIMIT="${LIMIT:-100}"
 URL_FILE="${URL_FILE:-$SCRIPT_DIR/urls.txt}"
+SLEEP_SECONDS="${SLEEP_SECONDS:-15}"
 
 if [[ ! -f "$URL_FILE" ]]; then
   echo "URL file not found: $URL_FILE" >&2
@@ -42,6 +43,11 @@ for i in "${!URLS[@]}"; do
   echo "========================================"
 
   python3 src/main.py --collect-jobs --url "$url" --limit "$LIMIT"
+  
+  if [[ "$current" -lt "$TOTAL" ]]; then
+    echo "Sleeping ${SLEEP_SECONDS}s before next URL..."
+    sleep "$SLEEP_SECONDS"
+  fi
 done
 
 echo "========================================"

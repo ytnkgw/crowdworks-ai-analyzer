@@ -18,6 +18,7 @@ DEBUG_DIR = "debug"
 HTML_FILENAME = "crowdworks_ai_bpo.html"
 
 REQUEST_TIMEOUT = 30
+REQUEST_SLEEP_SECONDS = float(os.getenv("REQUEST_SLEEP_SECONDS", "3"))
 
 OPENAI_API_KEY = os.getenv("CW_AI_ANALYZER_OPENAI_API_KEY", "")
 OPENAI_MODEL = "gpt-4o-mini"

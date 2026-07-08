@@ -12,6 +12,8 @@ OUTPUT_UPDATE_SUMMARY_FILENAME = "update_summary.json"
 OUTPUT_ANALYSIS_RESULTS_FILENAME = "analysis_results.json"
 OUTPUT_RANKED_JOBS_FILENAME = "ranked_jobs.json"
 OUTPUT_RANKED_REPORT_FILENAME = "ranked_jobs_report.md"
+OUTPUT_LOGS_DIRNAME = "logs"
+OUTPUT_COLLECTION_LOG_PREFIX = "collection_log"
 
 DEBUG_DIR = "debug"
 

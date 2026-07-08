@@ -3,7 +3,9 @@ import json
 import config
 from datetime import datetime
 from pathlib import Path
+from time import perf_counter
 from zoneinfo import ZoneInfo
+from collection_logger import append_collection_log
 from exporter import (
     save_raw_jobs,
     save_jobs_snapshot,
@@ -149,45 +151,88 @@ def _fill_application_deadline_from_jobs_json(
 
 
 def _run_collect_pipeline(args: argparse.Namespace, output_dir: Path) -> None:
-    now = datetime.now(_JST).isoformat()
-    jobs_path = output_dir / config.OUTPUT_JOBS_FILENAME
+    started_at_dt = datetime.now(_JST)
+    started_at = started_at_dt.isoformat()
+    start_time = perf_counter()
 
-    existing_jobs = load_jobs_from_json(jobs_path) if jobs_path.exists() else []
-    collected_jobs = collect_jobs_from_url(args.url, limit=args.limit)
-    updated_jobs, store_summary = update_job_store_with_summary(
-        existing_jobs, collected_jobs, args.url, now
-    )
+    try:
+        now = started_at
+        jobs_path = output_dir / config.OUTPUT_JOBS_FILENAME
 
-    raw_output_path = save_raw_jobs(collected_jobs, args.url, output_dir=output_dir)
-    export_jobs_to_json(updated_jobs, jobs_path)
-    snapshot_path = save_jobs_snapshot(updated_jobs, output_dir, now)
-    jobs_for_ai_path = output_dir / config.OUTPUT_JOBS_FOR_AI_FILENAME
-    export_jobs_for_ai_jsonl(updated_jobs, jobs_for_ai_path)
-    update_summary = {
-        "updated_at": now,
-        "source_url": args.url,
-        "existing_count": len(existing_jobs),
-        "collected_count": len(collected_jobs),
-        "added_count": store_summary["added_count"],
-        "updated_count": store_summary["updated_count"],
-        "expired_removed_count": store_summary["expired_removed_count"],
-        "saved_count": store_summary["saved_count"],
-        "output_files": {
-            "jobs_json": str(jobs_path),
-            "snapshot": str(snapshot_path),
-            "jobs_for_ai": str(jobs_for_ai_path),
-        },
-    }
-    update_summary_path = output_dir / config.OUTPUT_UPDATE_SUMMARY_FILENAME
-    export_update_summary(update_summary, update_summary_path)
+        existing_jobs = load_jobs_from_json(jobs_path) if jobs_path.exists() else []
+        collected_jobs = collect_jobs_from_url(args.url, limit=args.limit)
+        updated_jobs, store_summary = update_job_store_with_summary(
+            existing_jobs, collected_jobs, args.url, now
+        )
 
-    print(f"Saved raw jobs: {raw_output_path}")
-    print(f"Saved pipeline jobs: {jobs_path}")
-    print(f"Saved snapshot: {snapshot_path}")
-    print(f"Saved jobs for AI: {jobs_for_ai_path}")
-    print(f"Saved update summary: {update_summary_path}")
-    print(f"Collected {len(collected_jobs)} jobs.")
-    print(f"Saved {len(updated_jobs)} jobs after update.")
+        raw_output_path = save_raw_jobs(collected_jobs, args.url, output_dir=output_dir)
+        export_jobs_to_json(updated_jobs, jobs_path)
+        snapshot_path = save_jobs_snapshot(updated_jobs, output_dir, now)
+        jobs_for_ai_path = output_dir / config.OUTPUT_JOBS_FOR_AI_FILENAME
+        export_jobs_for_ai_jsonl(updated_jobs, jobs_for_ai_path)
+        update_summary = {
+            "updated_at": now,
+            "source_url": args.url,
+            "existing_count": len(existing_jobs),
+            "collected_count": len(collected_jobs),
+            "added_count": store_summary["added_count"],
+            "updated_count": store_summary["updated_count"],
+            "expired_removed_count": store_summary["expired_removed_count"],
+            "saved_count": store_summary["saved_count"],
+            "output_files": {
+                "jobs_json": str(jobs_path),
+                "snapshot": str(snapshot_path),
+                "jobs_for_ai": str(jobs_for_ai_path),
+            },
+        }
+        update_summary_path = output_dir / config.OUTPUT_UPDATE_SUMMARY_FILENAME
+        export_update_summary(update_summary, update_summary_path)
+
+        finished_at_dt = datetime.now(_JST)
+        collection_log_path = append_collection_log(
+            {
+                "started_at": started_at,
+                "finished_at": finished_at_dt.isoformat(),
+                "source_url": args.url,
+                "status": "success",
+                "limit": args.limit,
+                "collected_count": len(collected_jobs),
+                "added_count": store_summary["added_count"],
+                "updated_count": store_summary["updated_count"],
+                "expired_removed_count": store_summary["expired_removed_count"],
+                "saved_count": store_summary["saved_count"],
+                "duration_seconds": round(perf_counter() - start_time, 3),
+            },
+            output_dir,
+            log_datetime=started_at_dt,
+        )
+
+        print(f"Saved raw jobs: {raw_output_path}")
+        print(f"Saved pipeline jobs: {jobs_path}")
+        print(f"Saved snapshot: {snapshot_path}")
+        print(f"Saved jobs for AI: {jobs_for_ai_path}")
+        print(f"Saved update summary: {update_summary_path}")
+        print(f"Saved collection log: {collection_log_path}")
+        print(f"Collected {len(collected_jobs)} jobs.")
+        print(f"Saved {len(updated_jobs)} jobs after update.")
+    except Exception as error:
+        finished_at_dt = datetime.now(_JST)
+        collection_log_path = append_collection_log(
+            {
+                "started_at": started_at,
+                "finished_at": finished_at_dt.isoformat(),
+                "source_url": args.url,
+                "status": "error",
+                "limit": args.limit,
+                "error_type": type(error).__name__,
+                "error_message": str(error),
+                "duration_seconds": round(perf_counter() - start_time, 3),
+            },
+            output_dir,
+            log_datetime=started_at_dt,
+        )
+        print(f"Saved collection log: {collection_log_path}")
+        raise
 
 
 def _run_analyze_pipeline(args: argparse.Namespace, output_dir: Path) -> bool:

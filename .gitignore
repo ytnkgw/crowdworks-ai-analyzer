@@ -54,3 +54,9 @@ output/**/*.jsonl
 output/**/*.md
 !output/.gitkeep
 !output/raw/.gitkeep
+
+# =====================
+# scripts
+# =====================
+
+scripts/urls.txt

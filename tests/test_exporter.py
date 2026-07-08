@@ -270,6 +270,7 @@ def test_export_jobs_for_ai_jsonl_writes_single_job_as_one_line(tmp_path: Path) 
             id=1,
             title="案件A",
             url="https://example.com/jobs/1",
+            description="案件詳細本文",
         )
     ]
 
@@ -283,10 +284,13 @@ def test_export_jobs_for_ai_jsonl_writes_single_job_as_one_line(tmp_path: Path) 
     row = json.loads(lines[0])
     assert row["id"] == 1
     assert row["title"] == "案件A"
-    assert row["metadata"] is None
+    assert row["description"] == "案件詳細本文"
+    assert "metadata" not in row
+    assert "delivery_deadline" not in row
+    assert "is_remote" not in row
 
 
-def test_export_jobs_for_ai_jsonl_writes_multiple_lines_with_utf8_and_metadata(
+def test_export_jobs_for_ai_jsonl_writes_multiple_lines_with_utf8_and_selected_fields(
     tmp_path: Path,
 ) -> None:
     jobs = [
@@ -294,6 +298,21 @@ def test_export_jobs_for_ai_jsonl_writes_multiple_lines_with_utf8_and_metadata(
             id=1,
             title="日本語タイトル",
             url="https://example.com/jobs/1",
+            description="案件詳細本文",
+            published_at="2026年07月08日",
+            contract_count=0,
+            delivery_deadline="2026年08月01日",
+            is_remote=True,
+            client=Client(
+                id=123,
+                name="発注者A",
+                rating=4.5,
+                identity_verified=True,
+                rule_checked=False,
+                jobs_posted_count=10,
+                project_finished_rate=80,
+                profile_description="発注者プロフィール",
+            ),
             metadata=JobMetadata(
                 first_seen_at="2026-07-05T10:00:00+09:00",
                 last_seen_at="2026-07-05T10:00:00+09:00",
@@ -312,6 +331,7 @@ def test_export_jobs_for_ai_jsonl_writes_multiple_lines_with_utf8_and_metadata(
             id=2,
             title="案件B",
             url="https://example.com/jobs/2",
+            reward="固定報酬制",
         ),
     ]
 
@@ -325,8 +345,89 @@ def test_export_jobs_for_ai_jsonl_writes_multiple_lines_with_utf8_and_metadata(
     assert "\\u65e5\\u672c" not in text
 
     first = json.loads(lines[0])
-    assert first["metadata"] is not None
-    assert first["metadata"]["sources"][0]["seen_count"] == 1
+    assert first["published_at"] == "2026年07月08日"
+    assert first["contract_count"] == 0
+    assert first["client"]["name"] == "発注者A"
+    assert "metadata" not in first
+    assert "delivery_deadline" not in first
+    assert "is_remote" not in first
+    assert "id" not in first["client"]
+
+
+def test_export_jobs_for_ai_jsonl_keeps_description_newlines_on_one_physical_line(
+    tmp_path: Path,
+) -> None:
+    jobs = [
+        Job(
+            id=1,
+            title="案件A",
+            url="https://example.com/jobs/1",
+            description="1行目\n2行目\n3行目",
+            client=Client(profile_description="紹介文1行目\n紹介文2行目"),
+        )
+    ]
+
+    output_path = tmp_path / "jobs_ai.jsonl"
+    export_jobs_for_ai_jsonl(jobs, output_path)
+
+    text = output_path.read_text(encoding="utf-8")
+    lines = text.splitlines()
+    assert len(lines) == 1
+    assert "\\n" in lines[0]
+
+    row = json.loads(lines[0])
+    assert row["description"] == "1行目\n2行目\n3行目"
+    assert row["client"]["profile_description"] == "紹介文1行目 紹介文2行目"
+
+
+def test_export_jobs_for_ai_jsonl_truncates_client_profile_description(
+    tmp_path: Path,
+) -> None:
+    long_profile = "紹介文\n" + "あ" * 250
+    jobs = [
+        Job(
+            id=1,
+            title="案件A",
+            url="https://example.com/jobs/1",
+            description="案件詳細本文",
+            client=Client(profile_description=long_profile),
+        )
+    ]
+
+    output_path = tmp_path / "jobs_ai.jsonl"
+    export_jobs_for_ai_jsonl(jobs, output_path)
+
+    row = json.loads(output_path.read_text(encoding="utf-8"))
+    profile_description = row["client"]["profile_description"]
+
+    assert len(profile_description) == 200
+    assert profile_description.endswith("...")
+    assert "\n" not in profile_description
+
+
+def test_export_jobs_for_ai_jsonl_skips_jobs_without_detail(tmp_path: Path) -> None:
+    jobs = [
+        Job(
+            id=1,
+            title="詳細なし案件",
+            url="https://example.com/jobs/1",
+        ),
+        Job(
+            id=2,
+            title="詳細あり案件",
+            url="https://example.com/jobs/2",
+            description="案件詳細本文",
+        ),
+    ]
+
+    output_path = tmp_path / "jobs_ai.jsonl"
+    export_jobs_for_ai_jsonl(jobs, output_path)
+
+    lines = output_path.read_text(encoding="utf-8").splitlines()
+    assert len(lines) == 1
+
+    row = json.loads(lines[0])
+    assert row["id"] == 2
 
 
 def test_export_update_summary_writes_utf8_json_and_creates_parent_dir(
